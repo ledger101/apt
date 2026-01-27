@@ -1,0 +1,66 @@
+@import '../../../styles/variables';
+
+.alert {
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    .alert-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .alert-content {
+        flex: 1;
+    }
+
+    .alert-title {
+        font-weight: $font-semibold;
+        margin-bottom: 4px;
+    }
+
+    .alert-message {
+        font-size: $text-sm;
+    }
+
+    .alert-dismiss {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}
+
+.alert-info {
+    background: rgba(34, 211, 238, 0.1);
+    border-left: 4px solid $secondary-500;
+    color: $text-primary;
+}
+
+.alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid $success-500;
+    color: $success-500;
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 4px solid $warning-500;
+    color: $warning-500;
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid $error-500;
+    color: $error-500;
+}

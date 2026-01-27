@@ -18,6 +18,23 @@ interface DashboardTile {
   badge?: string;
 }
 
+interface DashboardMetric {
+  label: string;
+  value: string | number;
+  change?: string;
+  trend?: 'up' | 'down' | 'neutral';
+  icon: string;
+}
+
+interface ActivityItem {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  description: string;
+  timestamp: Date;
+  module: string;
+}
+
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.html',
@@ -87,10 +104,76 @@ export class DashboardComponent {
     }
   ];
 
+  metrics: DashboardMetric[] = [
+    {
+      label: 'Active Vehicles',
+      value: 12,
+      change: '+2 this month',
+      trend: 'up',
+      icon: 'truck'
+    },
+    {
+      label: 'Pending Leave',
+      value: 5,
+      change: '3 awaiting approval',
+      trend: 'neutral',
+      icon: 'users'
+    },
+    {
+      label: 'Open Requisitions',
+      value: 8,
+      change: '2 urgent',
+      trend: 'up',
+      icon: 'package'
+    },
+    {
+      label: 'Safety Incidents',
+      value: 0,
+      change: 'Last 30 days',
+      trend: 'down',
+      icon: 'shield'
+    }
+  ];
+
+  recentActivity: ActivityItem[] = [
+    {
+      id: '1',
+      type: 'success',
+      title: 'Vehicle Registered',
+      description: 'Toyota Hilux (ABC-123) added to fleet',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30),
+      module: 'Fleet'
+    },
+    {
+      id: '2',
+      type: 'info',
+      title: 'Leave Request Submitted',
+      description: 'John Doe requested annual leave (5 days)',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+      module: 'Personnel'
+    },
+    {
+      id: '3',
+      type: 'warning',
+      title: 'Maintenance Due',
+      description: 'Rig-001 service interval approaching',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5),
+      module: 'Fleet'
+    },
+    {
+      id: '4',
+      type: 'success',
+      title: 'Safety Inspection Completed',
+      description: 'Site A passed monthly OHS inspection',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
+      module: 'OHS'
+    }
+  ];
+
   constructor(
     private authService: AuthService,
     private router: Router
-  ) {}
+  ) { }
 
   async logout() {
     try {
@@ -141,5 +224,30 @@ export class DashboardComponent {
       'shield': 'M12 2l8 3v7c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l8-3z'
     };
     return iconMap[icon] || '';
+  }
+
+  getMetricColor(trend?: 'up' | 'down' | 'neutral'): string {
+    switch (trend) {
+      case 'up': return 'green';
+      case 'down': return 'blue';
+      case 'neutral': return 'yellow';
+      default: return 'blue';
+    }
+  }
+
+  getTimeAgo(timestamp: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - timestamp.getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (minutes < 60) {
+      return `${minutes}m ago`;
+    } else if (hours < 24) {
+      return `${hours}h ago`;
+    } else {
+      return `${days}d ago`;
+    }
   }
 }

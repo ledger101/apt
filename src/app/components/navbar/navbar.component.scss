@@ -1,0 +1,119 @@
+@import '../../../styles/variables';
+@import '../../../styles/mixins';
+
+.navbar {
+    background-color: $secondary-500;
+    color: $primary-500;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+    padding: 0 $spacing-6;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.navbar-brand {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+
+    .brand-text {
+        font-family: $font-family-heading;
+        font-weight: $font-bold;
+        font-size: $text-xl;
+        color: $primary-500;
+        letter-spacing: -0.5px;
+    }
+}
+
+.navbar-menu {
+    display: flex;
+    align-items: center;
+    gap: $spacing-6;
+
+    @media (max-width: $breakpoint-tablet) {
+        position: absolute;
+        top: 64px;
+        left: 0;
+        width: 100%;
+        flex-direction: column;
+        background-color: $secondary-500;
+        padding: $spacing-4;
+        display: none;
+
+        &.active {
+            display: flex;
+        }
+    }
+}
+
+.navbar-nav {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: $spacing-1;
+
+    @media (max-width: $breakpoint-tablet) {
+        flex-direction: column;
+        width: 100%;
+        align-items: center;
+        gap: $spacing-4;
+    }
+}
+
+.nav-link {
+    color: $background-white;
+    font-family: $font-family-heading;
+    font-weight: $font-medium;
+    text-decoration: none;
+    padding: $spacing-2 $spacing-3;
+    border-radius: 4px;
+    transition: all 0.2s;
+
+    &:hover,
+    &.active {
+        color: $primary-500;
+        background-color: rgba(255, 215, 0, 0.1);
+    }
+}
+
+.navbar-toggler {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: $spacing-2;
+
+    @media (max-width: $breakpoint-tablet) {
+        display: block;
+    }
+
+    .toggler-icon {
+        display: block;
+        width: 24px;
+        height: 2px;
+        background-color: $primary-500;
+        margin: 5px 0;
+        transition: 0.2s;
+    }
+}
+
+.navbar-profile {
+    @media (max-width: $breakpoint-tablet) {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-top: $spacing-4;
+    }
+}

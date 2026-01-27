@@ -1,5 +1,9 @@
 import { Component, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Timestamp } from 'firebase/firestore';
+
+
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 // import { DataUploadService, UploadProgress } from '../../services/data-upload.service';
@@ -17,6 +21,7 @@ interface UploadState {
   uploadProgress: { stage: string; message: string; percentage: number };
   validationResults: ValidationResult | null;
   parsedData: Report | AquiferTest | DischargeTest | null;
+  detectedType: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
   borehole: Borehole | null;
   series: Series[];
   quality: Quality[];
@@ -27,10 +32,11 @@ interface UploadState {
   chartData: ChartConfiguration | null;
 }
 
+
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [CommonModule, BaseChartDirective],
+  imports: [CommonModule, FormsModule, BaseChartDirective],
   providers: [provideCharts(withDefaultRegisterables())],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.scss']
@@ -47,6 +53,7 @@ export class UploadComponent implements OnDestroy {
     uploadProgress: { stage: 'parsing', message: 'Ready to upload', percentage: 0 },
     validationResults: null,
     parsedData: null,
+    detectedType: 'unknown',
     borehole: null,
     series: [],
     quality: [],
@@ -66,7 +73,7 @@ export class UploadComponent implements OnDestroy {
     private excelParsingService: ExcelParsingService,
     private firestoreService: FirestoreService,
     private router: Router
-  ) {}
+  ) { }
 
   // ngOnInit(): void {
   //   // Subscribe to upload progress
@@ -74,14 +81,14 @@ export class UploadComponent implements OnDestroy {
   //     .pipe(takeUntil(this.destroy$))
   //     .subscribe(progress => {
   //       this.state.uploadProgress = progress;
-        
+
   //       // Handle completion
   //       if (progress.stage === 'complete') {
   //         this.state.success = true;
   //         this.state.isUploading = false;
   //         setTimeout(() => this.resetUpload(), 3000);
   //       }
-        
+
   //       // Handle errors
   //       if (progress.stage === 'error') {
   //         this.state.error = progress.message;
@@ -195,87 +202,45 @@ export class UploadComponent implements OnDestroy {
     this.state.error = null;
 
     try {
-      // Try parsing as aquifer test first
-      this.state.uploadProgress = { stage: 'parsing', message: 'Parsing file as discharge test...', percentage: 10 };
-      
-      let parseResult: { data: DischargeTest | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult };
-      
-      try {
-        parseResult = await this.excelParsingService.parseAquiferFile(this.state.selectedFile);
-      } catch (parseError: any) {
-        console.error('Error during initial parse:', parseError);
-        this.state.error = parseError.message || 'Failed to parse file';
-        this.state.isUploading = false;
-        this.state.uploadProgress = { stage: 'error', message: 'Parsing failed', percentage: 0 };
-        return;
-      }
+      this.state.uploadProgress = { stage: 'parsing', message: 'Detecting template and parsing...', percentage: 20 };
 
-      // If discharge parsing failed, try progress report
-      if (!parseResult.validation.isValid) {
-        this.state.uploadProgress = { stage: 'parsing', message: 'Trying as progress report...', percentage: 20 };
-        const progressResult = await this.excelParsingService.parseExcelFile(this.state.selectedFile);
-        parseResult = {
-          data: progressResult.data as any,
-          borehole: null,
-          series: [],
-          quality: [],
-          validation: progressResult.validation
-        };
-      }
+      const result = await this.excelParsingService.parseFile(this.state.selectedFile);
 
-      this.state.uploadProgress = { stage: 'parsing', message: 'File parsed successfully', percentage: 40 };
-
-      // Validate that we have data
-      if (!parseResult || (!parseResult.data && !parseResult.validation)) {
-        throw new Error('Parser returned invalid result');
-      }
+      this.state.uploadProgress = { stage: 'parsing', message: 'File parsed successfully', percentage: 60 };
 
       // Extract data and validation
-      this.state.validationResults = parseResult.validation;
-      this.state.parsedData = parseResult.data;
-      this.state.borehole = parseResult.borehole;
-      this.state.series = parseResult.series || [];
-      this.state.quality = parseResult.quality || [];
-      this.state.uploadProgress = { stage: 'validating', message: 'Validation complete', percentage: 70 };
+      this.state.validationResults = result.validation;
+      this.state.parsedData = result.data;
+      this.state.detectedType = result.type;
+      this.state.borehole = result.borehole;
+      this.state.series = result.series || [];
+      this.state.quality = result.quality || [];
+      this.state.uploadProgress = { stage: 'validating', message: 'Validation complete', percentage: 80 };
 
+      console.log('Detected type:', result.type);
       console.log('Parsed data:', this.state.parsedData);
-      console.log('Validation results:', this.state.validationResults);
-      console.log('Series count:', this.state.series.length);
 
       // Set default active tab based on data type
-      if (this.isReport(parseResult.data)) {
+      if (result.type === 'progress_report') {
         this.state.activeTab = 'header';
-        console.log('Data type: Report');
-      } else if (this.isAquiferTest(parseResult.data)) {
-        this.state.activeTab = 'testDetails';
-        console.log('Data type: AquiferTest');
-      } else if (this.isDischargeTest(parseResult.data)) {
-        this.state.activeTab = 'testDetails';
-        console.log('Data type: DischargeTest');
       } else {
-        console.warn('Unknown data type:', parseResult.data);
-        this.state.activeTab = 'header';
+        this.state.activeTab = 'testDetails';
       }
 
-      console.log('Active tab set to:', this.state.activeTab);
-
-      // Create chart for test data
+      // Create chart for test data if applicable
       try {
-        if (this.isAquiferTest(parseResult.data)) {
-          this.state.chartData = this.createChartData(parseResult.data as AquiferTest);
-        } else if (this.isDischargeTest(parseResult.data) && this.state.series.length > 0) {
-          console.log('Creating discharge chart with series:', this.state.series);
+        if (this.isAquiferTest(this.state.parsedData)) {
+          this.state.chartData = this.createChartData(this.state.parsedData as AquiferTest);
+        } else if (this.isDischargeTest(this.state.parsedData) && this.state.series.length > 0) {
           this.state.chartData = this.createDischargeChart(this.state.series);
         }
-        console.log('Chart created:', this.state.chartData);
       } catch (chartError: any) {
         console.error('Error creating chart:', chartError);
-        // Don't fail the entire parse if chart creation fails
         this.state.chartData = null;
       }
 
-      // Check if validation passed
-      if (!parseResult.validation.isValid) {
+      // Check if validation passed (allow preview even with warnings, but not with errors)
+      if (!result.validation.isValid) {
         this.state.error = 'Validation failed. Please review the errors below.';
         this.state.isUploading = false;
         this.state.showPreview = true;
@@ -289,11 +254,12 @@ export class UploadComponent implements OnDestroy {
 
     } catch (error: any) {
       console.error('Error parsing file:', error);
-      this.state.error = error.message || 'Failed to parse file. Please ensure the file matches the expected template for step or constant discharge tests.';
+      this.state.error = error.message || 'Failed to parse file. Please ensure the file matches a supported template.';
       this.state.isUploading = false;
       this.state.uploadProgress = { stage: 'error', message: 'Parsing failed', percentage: 0 };
     }
   }
+
 
   // Confirm and save to Firestore
   async confirmUpload(): Promise<void> {
@@ -318,15 +284,33 @@ export class UploadComponent implements OnDestroy {
       } else if (this.isDischargeTest(this.state.parsedData)) {
         // It's a DischargeTest
         const test = this.state.parsedData as DischargeTest;
-        test.sourceFilePath = 'uploaded-file-path'; // TODO: set actual path
+        const sourcePath = `uploads/${this.state.selectedFile?.name || 'unknown'}`;
+        test.sourceFilePath = sourcePath;
+
         if (this.state.borehole) {
           await this.firestoreService.saveBorehole(this.state.borehole);
         }
         await this.firestoreService.saveDischargeTest(test);
         await this.firestoreService.saveSeries(test.testId, this.state.series);
         await this.firestoreService.saveQuality(test.testId, this.state.quality);
-        // TODO: save parse job
+
+        // Save parse job
+        const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
+        await this.firestoreService.saveParseJob({
+          jobId: `job-${Date.now()}`,
+          testRef: `tests/${test.testId}`,
+          status: 'parsed',
+          warnings: this.state.validationResults?.warnings || [],
+          counts: {
+            series: this.state.series.length,
+            points: totalPoints
+          },
+          sourceFilePath: sourcePath,
+          createdBy: 'user-id', // TODO: Get from Auth
+          createdAt: Timestamp.now()
+        });
       }
+
 
       this.state.uploadProgress = { stage: 'complete', message: 'Data saved successfully!', percentage: 100 };
       this.state.success = true;
@@ -368,6 +352,7 @@ export class UploadComponent implements OnDestroy {
       uploadProgress: { stage: 'parsing', message: 'Ready to upload', percentage: 0 },
       validationResults: null,
       parsedData: null,
+      detectedType: 'unknown',
       borehole: null,
       series: [],
       quality: [],
@@ -400,17 +385,17 @@ export class UploadComponent implements OnDestroy {
   // Get validation summary
   getValidationSummary(): string {
     if (!this.state.validationResults) return '';
-    
+
     const { errors, warnings } = this.state.validationResults;
     const parts: string[] = [];
-    
+
     if (errors.length > 0) {
       parts.push(`${errors.length} error${errors.length !== 1 ? 's' : ''}`);
     }
     if (warnings.length > 0) {
       parts.push(`${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`);
     }
-    
+
     return parts.length > 0 ? parts.join(', ') : 'No issues found';
   }
 

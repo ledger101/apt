@@ -1,0 +1,36 @@
+@import 'variables';
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    font-family: $font-family-body;
+    background-color: $background-light;
+    color: $text-primary;
+    line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: $font-family-heading;
+    font-weight: $font-semibold;
+    color: $text-primary;
+    margin-top: 0;
+}
+
+a {
+    color: $primary-600;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}

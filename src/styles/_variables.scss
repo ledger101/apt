@@ -1,0 +1,55 @@
+// Brand Colors (Yellow & Black)
+$primary-500: #FFD700;      // Brand Yellow (Action, Highlight)
+$primary-600: #E6C200;      // Darker Yellow (Hover)
+$primary-content: #000000;  // Text on yellow
+
+$secondary-500: #000000;    // Brand Black (Headers, Navbar)
+$secondary-600: #1A1A1A;    // Dark Gray (Secondary Backgrounds)
+$secondary-700: #333333;
+
+// Functional Colors
+$success-500: #10B981;      // Green
+$warning-500: #F59E0B;      // Amber
+$error-500: #EF4444;        // Red
+
+// Neutral Palette
+$background-light: #F8F9FA; // Light Gray Background
+$background-white: #FFFFFF;
+$text-primary: #111827;     // Almost Black (Readability)
+$text-secondary: #4B5563;   // Gray
+$text-muted: #9CA3AF;       // Light Gray Text
+$border: #E5E7EB;           // Light Border
+
+// Typography
+$font-family-heading: 'Figtree', sans-serif;
+$font-family-body: 'Noto Sans', sans-serif;
+
+// Font Sizes
+$text-xs: 0.75rem;
+$text-sm: 0.875rem;
+$text-base: 1rem;
+$text-lg: 1.125rem;
+$text-xl: 1.25rem;
+$text-2xl: 1.5rem;
+$text-3xl: 1.875rem;
+
+// Font Weights
+$font-light: 300;
+$font-normal: 400;
+$font-medium: 500;
+$font-semibold: 600;
+$font-bold: 700;
+
+// Spacing
+$spacing-1: 4px;
+$spacing-2: 8px;
+$spacing-3: 12px;
+$spacing-4: 16px;
+$spacing-6: 24px;
+$spacing-8: 32px;
+
+// Breakpoints
+$breakpoint-mobile: 375px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1024px;
+$breakpoint-wide: 1440px;

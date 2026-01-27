@@ -28,9 +28,16 @@ export class ExcelParsingService {
   constructor() { }
 
   /**
-   * Parse an Excel workbook file and extract pumping report data with validation
+   * Main entry point for parsing any supported Excel file
    */
-  async parseExcelFile(file: File): Promise<{ data: Report | null; validation: ValidationResult }> {
+  async parseFile(file: File): Promise<{
+    type: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
+    data: Report | DischargeTest | null;
+    borehole: Borehole | null;
+    series: Series[];
+    quality: Quality[];
+    validation: ValidationResult;
+  }> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
@@ -38,9 +45,41 @@ export class ExcelParsingService {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
+          const type = this.detectTemplateType(workbook);
+          const validation: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
-          const result = this.extractReportData(workbook);
-          resolve(result);
+          if (type === 'progress_report') {
+            const result = this.extractReportData(workbook);
+            resolve({
+              type,
+              data: result.data,
+              borehole: null,
+              series: [],
+              quality: [],
+              validation: result.validation
+            });
+          } else if (type === 'stepped_discharge' || type === 'constant_discharge') {
+            const result = this.extractDischargeData(workbook, file.name);
+            resolve({
+              type,
+              data: result.data,
+              borehole: result.borehole,
+              series: result.series,
+              quality: result.quality,
+              validation: result.validation
+            });
+          } else {
+            validation.isValid = false;
+            validation.errors.push('Template type not recognized. Please use a supported Excel template.');
+            resolve({
+              type: 'unknown',
+              data: null,
+              borehole: null,
+              series: [],
+              quality: [],
+              validation
+            });
+          }
         } catch (error) {
           reject(error);
         }
@@ -52,28 +91,29 @@ export class ExcelParsingService {
   }
 
   /**
+   * Parse an Excel workbook file and extract pumping report data with validation
+   * @deprecated Use parseFile instead
+   */
+  async parseExcelFile(file: File): Promise<{ data: Report | null; validation: ValidationResult }> {
+    const result = await this.parseFile(file);
+    return { data: result.data as Report, validation: result.validation };
+  }
+
+  /**
    * Parse an Excel/CSV file for aquifer test data
+   * @deprecated Use parseFile instead
    */
   async parseAquiferFile(file: File): Promise<{ data: DischargeTest | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult }> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = (e: any) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-
-          const result = this.extractDischargeData(workbook);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      reader.onerror = (error) => reject(error);
-      reader.readAsArrayBuffer(file);
-    });
+    const result = await this.parseFile(file);
+    return {
+      data: result.data as DischargeTest,
+      borehole: result.borehole,
+      series: result.series,
+      quality: result.quality,
+      validation: result.validation
+    };
   }
+
 
   private extractReportData(workbook: XLSX.WorkBook): { data: Report | null; validation: ValidationResult } {
     const validation: ValidationResult = { isValid: true, errors: [], warnings: [] };
@@ -149,33 +189,59 @@ export class ExcelParsingService {
     return { data: report, validation };
   }
 
-  private extractDischargeData(workbook: XLSX.WorkBook): { data: DischargeTest | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult } {
+  private extractDischargeData(workbook: XLSX.WorkBook, filename?: string): { data: DischargeTest | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult } {
     const validation: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
-    // Assume first sheet
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    // Detect template type and find the correct sheet
+    let type: 'stepped_discharge' | 'constant_discharge' | 'unknown' = 'unknown';
+    let sheet: XLSX.WorkSheet | null = null;
 
-    if (!sheet) {
-      validation.isValid = false;
-      validation.errors.push('No sheet found in file');
-      return { data: null, borehole: null, series: [], quality: [], validation };
+    for (const name of workbook.SheetNames) {
+      const s = workbook.Sheets[name];
+      if (!s) continue;
+
+      const hasStepped = this.findCell(s, /STEPPED DISCHARGE TEST & RECOVERY/i) != null;
+      const hasConstant = this.findCell(s, /CONSTANT DISCHARGE AND RECOVERY/i) != null;
+
+      if (hasStepped) {
+        type = 'stepped_discharge';
+        sheet = s;
+        break;
+      }
+      if (hasConstant) {
+        type = 'constant_discharge';
+        sheet = s;
+        break;
+      }
+
+      // Heuristic fallback
+      const content = JSON.stringify(XLSX.utils.sheet_to_json(s, { header: 1, range: 0 })).toLowerCase();
+      if (content.includes('discharge rate 1') || content.includes('stepped discharge')) {
+        type = 'stepped_discharge';
+        sheet = s;
+        break;
+      }
+      if (content.includes('observation hole 1') || content.includes('constant discharge')) {
+        type = 'constant_discharge';
+        sheet = s;
+        break;
+      }
     }
 
-    // Detect template type
-    const detection = this.detectTemplateType(sheet);
-    if (detection.type === 'unknown') {
+    if (type === 'unknown' || !sheet) {
       validation.isValid = false;
-      validation.errors.push('Template not recognized');
+      validation.errors.push('Template not recognized in any sheet');
       return { data: null, borehole: null, series: [], quality: [], validation };
     }
 
     let result: any;
-    if (detection.type === 'steppeddischarge') {
-      result = this.parseSteppedDischarge(sheet, validation);
+    if (type === 'stepped_discharge') {
+      result = this.parseSteppedDischarge(sheet, validation, filename);
     } else {
-      result = this.parseConstantDischarge(sheet, validation);
+      result = this.parseConstantDischarge(sheet, validation, filename);
     }
+
+
 
     if (!result.ok) {
       validation.isValid = false;
@@ -307,8 +373,8 @@ export class ExcelParsingService {
 
       console.log(`B${row}`);
       console.log(activity);
-      
-      
+
+
       if (activity || from || to) {
         activities.push({
           order: row - startRow + 1,
@@ -431,26 +497,48 @@ export class ExcelParsingService {
   }
 
   // New methods for discharge parsing
-  private detectTemplateType(sheet: XLSX.WorkSheet): { type: 'steppeddischarge' | 'constantdischarge' | 'unknown' } {
-    const hasStepped = this.findCell(sheet, /STEPPED DISCHARGE TEST & RECOVERY/i) != null;
-    const hasConstant = this.findCell(sheet, /CONSTANT DISCHARGE AND RECOVERY/i) != null;
+  private detectTemplateType(workbook: XLSX.WorkBook): 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown' {
+    // 1. Check for Progress Report sheet by name (as it's a fixed name template)
+    if (workbook.Sheets[this.SHEET_NAME]) {
+      return 'progress_report';
+    }
 
-    if (hasStepped && !hasConstant) return { type: 'steppeddischarge' };
-    if (hasConstant && !hasStepped) return { type: 'constantdischarge' };
+    // 2. Check all sheets for Discharge test patterns
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      if (!sheet) continue;
 
-    // Fallback heuristics
-    if (this.findCell(sheet, /discharge\srate\s1/i)) return { type: 'steppeddischarge' };
-    if (this.findCell(sheet, /observation\shole\s*1/i)) return { type: 'constantdischarge' };
+      const hasStepped = this.findCell(sheet, /STEPPED DISCHARGE TEST & RECOVERY/i) != null;
+      if (hasStepped) return 'stepped_discharge';
 
-    return { type: 'unknown' };
+      const hasConstant = this.findCell(sheet, /CONSTANT DISCHARGE AND RECOVERY/i) != null;
+      if (hasConstant) return 'constant_discharge';
+
+      // Fallback heuristics per sheet
+      const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0 });
+      const content = JSON.stringify(sheetData).toLowerCase();
+
+      if (content.includes('discharge rate 1') || content.includes('stepped discharge')) {
+        return 'stepped_discharge';
+      }
+      if (content.includes('observation hole 1') || content.includes('constant discharge')) {
+        return 'constant_discharge';
+      }
+    }
+
+    return 'unknown';
   }
 
-  private parseSteppedDischarge(sheet: XLSX.WorkSheet, validation: ValidationResult): { ok: boolean; data?: any; error?: string } {
+
+
+  private parseSteppedDischarge(sheet: XLSX.WorkSheet, validation: ValidationResult, filename?: string): { ok: boolean; data?: any; error?: string } {
     const meta: any = {};
-    // Probe for metadata
+    // Probe for metadata based on PRD 5.1
     meta.projectNo = this.getNear(sheet, /project\sno/i);
+    meta.mapRef = this.getNear(sheet, /map\sreference/i);
     meta.province = this.getNear(sheet, /province/i);
     meta.boreholeNo = this.getNear(sheet, /borehole\sno/i);
+    meta.altBhNo = this.getNear(sheet, /^alt(.|ernative)?\sbh\sno/i);
     meta.siteName = this.getNear(sheet, /site\sname/i);
     meta.district = this.getNear(sheet, /district/i);
     meta.latitude = this.parseCoordinate(this.getNear(sheet, /latitude/i));
@@ -462,10 +550,18 @@ export class ExcelParsingService {
     meta.staticWLmbdl = this.toFloat(this.getNear(sheet, /water\slevel.mbdl/i));
     meta.casingHeightmagl = this.toFloat(this.getNear(sheet, /casing\sheight.magl/i));
     meta.contractor = this.getNear(sheet, /contractor/i);
+    meta.client = this.getNear(sheet, /client/i);
     meta.pumpDepthm = this.toFloat(this.getNear(sheet, /depth\sof\spump/i));
     meta.pumpInletDiammm = this.toFloat(this.getNear(sheet, /diam(eter)?\spump\sinlet/i));
     meta.pumpType = this.getNear(sheet, /pump\stype/i);
     meta.swlmbch = this.toFloat(this.getNear(sheet, /s\/w\/l.mbch/i));
+
+    // Validation for required fields with fallback
+    if (!meta.boreholeNo && !meta.siteName) {
+      const fallback = filename ? filename.split('.')[0] : 'Unknown-Borehole';
+      meta.boreholeNo = fallback;
+      validation.warnings.push(`Borehole No/Site Name not found in file. Using filename "${fallback}" as a placeholder.`);
+    }
 
     let startISO: string | null = null;
     const series: any[] = [];
@@ -476,14 +572,17 @@ export class ExcelParsingService {
       const titleCell = this.findCell(sheet, new RegExp(`discharge\\srate\\s${rate}`, 'i'));
       if (!titleCell) continue;
 
-      // Extract start time
+      // Extract start date/time for this rate
       const dateVal = this.readNeighbor(sheet, titleCell.row, titleCell.col, /date/i);
       const timeVal = this.readNeighbor(sheet, titleCell.row, titleCell.col, /time/i);
       const rateStartISO = this.excelSerialDateToISO(this.toFloat(dateVal), timeVal);
       if (!startISO && rateStartISO) startISO = rateStartISO;
 
       const headerRow = this.findHeaderRowBelow(sheet, titleCell.row, [this.HEADER_PATTERNS.timemin, this.HEADER_PATTERNS.waterlevelm]);
-      if (!headerRow) continue;
+      if (!headerRow) {
+        validation.warnings.push(`Headers not found for Discharge Rate ${rate}`);
+        continue;
+      }
 
       const headerMap = this.mapHeaders(sheet, headerRow, {
         time: this.HEADER_PATTERNS.timemin,
@@ -505,14 +604,16 @@ export class ExcelParsingService {
           pts.push(p);
         }
       }
+
       if (pts.length > 0) {
         series.push({ seriesType: 'discharge_rate', rateIndex: rate, points: pts });
       }
 
-      // Quality
-      const phVal = this.findInlineLabelValueBelow(sheet, headerRow, /pH/i, 10);
-      const tempVal = this.findInlineLabelValueBelow(sheet, headerRow, /temp/i, 10);
-      const ecVal = this.findInlineLabelValueBelow(sheet, headerRow, /ec/i, 10);
+      // Quality extraction for this rate
+      const phVal = this.findInlineLabelValueBelow(sheet, headerRow, /pH/i, 12);
+      const tempVal = this.findInlineLabelValueBelow(sheet, headerRow, /temp/i, 12);
+      const ecVal = this.findInlineLabelValueBelow(sheet, headerRow, /ec/i, 12);
+
       if (phVal || tempVal || ecVal) {
         quality.push({
           rateIndex: rate,
@@ -526,7 +627,7 @@ export class ExcelParsingService {
     // Recovery
     const recTitle = this.findCell(sheet, this.HEADER_PATTERNS.recoverytitle);
     if (recTitle) {
-      const headerRow = this.findHeaderRowBelow(sheet, recTitle.row, [this.HEADER_PATTERNS.timemin]);
+      const headerRow = this.findHeaderRowBelow(sheet, recTitle.row, [this.HEADER_PATTERNS.timemin, this.HEADER_PATTERNS.waterlevelm]);
       if (headerRow) {
         const headerMap = this.mapHeaders(sheet, headerRow, {
           time: this.HEADER_PATTERNS.timemin,
@@ -534,21 +635,27 @@ export class ExcelParsingService {
           rec: /^recovery.*m$/i
         });
         const rows = this.readTable(sheet, headerRow + 1, headerRow, headerMap, [this.HEADER_PATTERNS.dischargerate]);
-        const pts: DischargePoint[] = [];
+        const pts: { t_min?: number; wl_m?: number; recoverym?: number }[] = [];
         for (const row of rows) {
-          const p: DischargePoint = {
-            t_min: this.ensureNonNegative(this.toFloat(row.time)),
-            wl_m: this.toFloat(row.wl) || undefined,
-            recoverym: this.toFloat(row.rec) || undefined
-          };
-          if (p.t_min != null || p.wl_m != null || p.recoverym != null) {
-            pts.push(p);
+          const t = this.ensureNonNegative(this.toFloat(row.time));
+          const wl = this.toFloat(row.wl);
+          const rec = this.toFloat(row.rec);
+          if (t != null || wl != null || rec != null) {
+            pts.push({
+              t_min: t ?? undefined,
+              wl_m: wl ?? undefined,
+              recoverym: rec ?? undefined
+            });
           }
         }
         if (pts.length > 0) {
           series.push({ seriesType: 'recovery', points: pts });
         }
       }
+    }
+
+    if (series.length === 0) {
+      validation.warnings.push('No test data points found. Ensure your template contains headers like TIME (MIN) and WATER LEVEL (M).');
     }
 
     return {
@@ -563,15 +670,19 @@ export class ExcelParsingService {
     };
   }
 
-  private parseConstantDischarge(sheet: XLSX.WorkSheet, validation: ValidationResult): { ok: boolean; data?: any; error?: string } {
+
+  private parseConstantDischarge(sheet: XLSX.WorkSheet, validation: ValidationResult, filename?: string): { ok: boolean; data?: any; error?: string } {
     const meta: any = {};
     meta.boreholeNo = this.getNear(sheet, /borehole\sno/i);
+    meta.altBhNo = this.getNear(sheet, /^alt(.|ernative)?\sbh\sno/i);
     meta.siteName = this.getNear(sheet, /site\sname/i);
     meta.client = this.getNear(sheet, /client/i);
     meta.contractor = this.getNear(sheet, /contractor/i);
+
     const coords = this.parseCoordinatesBothIfPresent(sheet);
     meta.latitude = coords?.lat;
     meta.longitude = coords?.lon;
+
     meta.boreholeDepthm = this.toFloat(this.getNear(sheet, /borehole\sdepth/i));
     meta.datumAboveCasingm = this.toFloat(this.getNear(sheet, /datum.above\scasing/i));
     meta.existingPump = this.getNear(sheet, /existing\spump/i);
@@ -584,21 +695,33 @@ export class ExcelParsingService {
     const testStartedSerial = this.toFloat(this.getNear(sheet, /test\sstarted/i));
     const startTimeStr = this.getNear(sheet, /^start\stime/i);
     meta.startISO = this.excelSerialDateToISO(testStartedSerial, startTimeStr);
+
     const testCompletedSerial = this.toFloat(this.getNear(sheet, /test\scompleted/i));
     meta.endISO = this.excelSerialDateToISO(testCompletedSerial);
 
     meta.availableDrawdownm = this.toFloat(this.extractInline(sheet, /available\sdrawdown\s=\s([0-9.-]+)/i));
     meta.totalTimePumpedmin = this.toFloat(this.getNear(sheet, /total\stime\s*pumped/i));
 
+    // Validation with fallback
+    if (!meta.boreholeNo && !meta.siteName) {
+      const fallback = filename ? filename.split('.')[0] : 'Unknown-Borehole';
+      meta.boreholeNo = fallback;
+      validation.warnings.push(`Borehole No/Site Name not found in file. Using filename "${fallback}" as a placeholder.`);
+    }
+
     const series: any[] = [];
 
-    // Find main header row
+    // Find main header row for the composite table
     const hdrRow = this.findRowThatContains(sheet, [this.HEADER_PATTERNS.timemin, this.HEADER_PATTERNS.dischargebh]);
     if (!hdrRow) {
-      return { ok: false, error: 'Main header row not found' };
+      return { ok: false, error: 'Main composite table header row not found' };
     }
 
     const groups = this.scanGroups(sheet, hdrRow);
+    if (groups.length === 0) {
+      return { ok: false, error: 'No data column groups (Discharge/Obs holes) identified' };
+    }
+
     const points: { [key: string]: DischargePoint[] } = {
       discharge: [],
       obshole1: [],
@@ -611,36 +734,37 @@ export class ExcelParsingService {
     let r = dataStart;
     let emptyStreak = 0;
     const maxEmptyStreak = 50;
+    const maxRow = (sheet['!ref'] ? XLSX.utils.decode_range(sheet['!ref']).e.r : 1000);
 
-    while (r <= (sheet['!ref'] ? XLSX.utils.decode_range(sheet['!ref']).e.r : 1000) && emptyStreak < maxEmptyStreak) {
+    while (r <= maxRow && emptyStreak < maxEmptyStreak) {
       let rowEmpty = true;
       for (const g of groups) {
         const k = g.keys;
-        const t = k['time'] ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['time'] })) : null;
-        const wl = k['wl'] ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['wl'] })) : null;
-        const dd = k['ddn'] ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['ddn'] })) : null;
-        const q = k['q'] ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['q'] })) : null;
+        const t = k['time'] != null ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['time'] })) : null;
+        const wl = k['wl'] != null ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['wl'] })) : null;
+        const dd = k['ddn'] != null ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['ddn'] })) : null;
+        const q = k['q'] != null ? this.getCellValue(sheet, XLSX.utils.encode_cell({ r: r, c: k['q'] })) : null;
 
         if (t || wl || dd || q) rowEmpty = false;
 
-        let p: DischargePoint;
+        let p: DischargePoint | null = null;
         if (g.name === 'recovery') {
-          p = {
-            t_min: this.ensureNonNegative(this.toFloat(t)),
-            wl_m: this.toFloat(wl) || undefined
-          };
+          const tVal = this.ensureNonNegative(this.toFloat(t));
+          const wlVal = this.toFloat(wl);
+          if (tVal != null || wlVal != null) {
+            p = { t_min: tVal, wl_m: wlVal || undefined };
+          }
         } else if (g.name.startsWith('obshole')) {
           p = this.normalizeUnitsPoint({ time: t, wl: wl, ddn: dd, q: null });
         } else if (g.name === 'discharge') {
           p = this.normalizeUnitsPoint({ time: t, wl: wl, ddn: dd, q: q });
-        } else {
-          continue;
         }
 
-        if (p.t_min != null || p.wl_m != null || p.ddn_m != null || p.qlps != null) {
+        if (p && (p.t_min != null || p.wl_m != null || p.ddn_m != null || p.qlps != null)) {
           points[g.name].push(p);
         }
       }
+
       if (rowEmpty) emptyStreak++;
       else emptyStreak = 0;
       r++;
@@ -654,6 +778,10 @@ export class ExcelParsingService {
     }
     if (points['recovery'].length > 0) series.push({ seriesType: 'recovery', points: points['recovery'] });
 
+    if (series.length === 0) {
+      validation.warnings.push('No test data points found. Ensure your template contains headers like TIME (MIN), DISCHARGE BOREHOLE, or OBSERVATION HOLE.');
+    }
+
     return {
       ok: true,
       data: {
@@ -664,6 +792,7 @@ export class ExcelParsingService {
       }
     };
   }
+
 
   private normalizeCommon(parsed: any, validation: ValidationResult): any {
     if (!parsed.meta.boreholeNo && !parsed.meta.siteName) {
@@ -795,16 +924,23 @@ export class ExcelParsingService {
   }
 
   private findHeaderRowBelow(sheet: XLSX.WorkSheet, startRow: number, patterns: RegExp[]): number | null {
-    const maxRow = XLSX.utils.decode_range(sheet['!ref'] || 'A1:Z100').e.r;
-    for (let r = startRow + 1; r <= Math.min(maxRow, startRow + 8); r++) {
-      const rowText = Object.keys(sheet).filter(k => k.startsWith(XLSX.utils.encode_cell({ r, c: 0 }).replace(/\d+/, ''))).map(c => {
-        const cell = sheet[c + r];
-        return cell ? this.norm(cell.v || cell.w || '') : '';
-      }).join(' | ');
+    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:Z100');
+    const maxRow = range.e.r;
+
+    for (let r = startRow + 1; r <= Math.min(maxRow, startRow + 20); r++) { // Increased lookahead
+      const rowValues: string[] = [];
+      for (let c = range.s.c; c <= Math.min(range.e.c, 26); c++) {
+        const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+        if (cell) {
+          rowValues.push(this.norm(cell.v || cell.w || ''));
+        }
+      }
+      const rowText = rowValues.join(' | ');
       if (patterns.every(pat => pat.test(rowText))) return r;
     }
     return null;
   }
+
 
   private readNeighbor(sheet: XLSX.WorkSheet, row: number, col: number, regex: RegExp): string {
     for (let dc = 1; dc <= 6; dc++) {

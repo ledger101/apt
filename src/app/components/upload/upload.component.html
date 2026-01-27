@@ -168,11 +168,29 @@
   </div>
 
   <!-- Preview Section -->
-  <div *ngIf="state.showPreview && state.parsedData" class="space-y-6">
+  <div *ngIf="state.showPreview" class="space-y-6">
+
     
     <!-- Header with Actions -->
     <div class="flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-gray-900">Data Preview & Validation</h3>
+      <div class="flex items-center space-x-3">
+        <h3 class="text-lg font-semibold text-gray-900">Data Preview & Validation</h3>
+        <span 
+          class="px-2.5 py-0.5 rounded-full text-xs font-medium"
+          [ngClass]="{
+            'bg-blue-100 text-blue-800': state.detectedType === 'progress_report',
+            'bg-purple-100 text-purple-800': state.detectedType === 'stepped_discharge',
+            'bg-indigo-100 text-indigo-800': state.detectedType === 'constant_discharge',
+            'bg-gray-100 text-gray-800': state.detectedType === 'unknown'
+          }"
+        >
+          {{ 
+            state.detectedType === 'progress_report' ? 'Progress Report' : 
+            state.detectedType === 'stepped_discharge' ? 'Stepped Discharge' : 
+            state.detectedType === 'constant_discharge' ? 'Constant Discharge' : 'Unknown'
+          }}
+        </span>
+      </div>
       <button
         type="button"
         (click)="cancelUpload()"
@@ -183,6 +201,8 @@
         </svg>
       </button>
     </div>
+
+
 
     <!-- Validation Results -->
     <div class="bg-white border rounded-lg p-4">
@@ -223,7 +243,23 @@
           </li>
         </ul>
       </div>
+
+      <!-- No Data Alternative Alert -->
+      <div *ngIf="state.series.length === 0" class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+        <div class="flex">
+          <svg class="h-5 w-5 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h4 class="text-sm font-semibold text-blue-800">No time-series data detected</h4>
+            <p class="text-xs text-blue-700 mt-1">
+              We couldn't auto-detect the test data tables. You can still save the **Borehole & Site information**, or re-save your Excel file ensuring column headers like <b>"TIME (MIN)"</b> are present.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
+
 
     <!-- Data Preview Tabs -->
     <div class="bg-white border rounded-lg">
@@ -283,6 +319,13 @@
           <!-- Discharge Test Tabs -->
           <ng-container *ngIf="isDischargeTest(state.parsedData)">
             <button
+              (click)="setActiveTab('header')"
+              [ngClass]="state.activeTab === 'header' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+              class="whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm"
+            >
+              Header
+            </button>
+            <button
               (click)="setActiveTab('testDetails')"
               [ngClass]="state.activeTab === 'testDetails' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
               class="whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm"
@@ -294,7 +337,7 @@
               [ngClass]="state.activeTab === 'borehole' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
               class="whitespace-nowrap py-2 px-4 border-b-2 font-medium text-sm"
             >
-              Borehole
+              Technical Info
             </button>
             <button
               (click)="setActiveTab('series')"
@@ -304,6 +347,7 @@
               Series
             </button>
           </ng-container>
+
 
           <!-- Chart Tab (for both types) -->
           <button
@@ -320,21 +364,56 @@
       <!-- Tab Content -->
       <div class="p-4">
         <!-- Report Data Tabs -->
-        <div *ngIf="isReport(state.parsedData)">
-          <!-- Header Tab -->
-          <div *ngIf="state.activeTab === 'header'" class="space-y-4">
-            <h4 class="text-sm font-semibold text-gray-900">Report Header</h4>
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div><span class="text-gray-600">Date:</span> <span class="font-medium">{{ state.parsedData.reportDate | date }}</span></div>
-              <div><span class="text-gray-600">Client:</span> <span class="font-medium">{{ state.parsedData.client }}</span></div>
-              <div><span class="text-gray-600">Project/Site Area:</span> <span class="font-medium">{{ state.parsedData.projectSiteArea }}</span></div>
-              <div><span class="text-gray-600">Rig Number:</span> <span class="font-medium">{{ state.parsedData.rigNumber }}</span></div>
-              <div><span class="text-gray-600">Supervisor:</span> <span class="font-medium">{{ state.parsedData.supervisorName }}</span></div>
-              <div><span class="text-gray-600">Client Rep:</span> <span class="font-medium">{{ state.parsedData.clientRepName }}</span></div>
+        <!-- Common Metadata Tab (Borehole/Site/Client) -->
+        <div *ngIf="state.activeTab === 'header'" class="space-y-4">
+          <h4 class="text-sm font-semibold text-gray-900">Report/Test Metadata</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Borehole No (Editable) -->
+            <div *ngIf="state.borehole">
+              <label class="block text-xs text-gray-500 mb-1">Borehole No</label>
+              <input 
+                type="text" 
+                [(ngModel)]="state.borehole.boreholeNo"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter Borehole No"
+              >
             </div>
-          </div>
+            
+            <!-- Site Name (Editable) -->
+            <div *ngIf="state.borehole">
+              <label class="block text-xs text-gray-500 mb-1">Site Name</label>
+              <input 
+                type="text" 
+                [(ngModel)]="state.borehole.siteName"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter Site Name"
+              >
+            </div>
 
+            <!-- Read-only Progress Report metadata -->
+            <ng-container *ngIf="isReport(state.parsedData)">
+              <div><span class="text-gray-600 text-xs block">Date</span> <span class="font-medium text-sm">{{ state.parsedData.reportDate | date }}</span></div>
+              <div><span class="text-gray-600 text-xs block">Client</span> <span class="font-medium text-sm">{{ state.parsedData.client }}</span></div>
+              <div><span class="text-gray-600 text-xs block">Project/Site Area</span> <span class="font-medium text-sm">{{ state.parsedData.projectSiteArea }}</span></div>
+              <div><span class="text-gray-600 text-xs block">Rig Number</span> <span class="font-medium text-sm">{{ state.parsedData.rigNumber }}</span></div>
+            </ng-container>
+            
+            <!-- Read-only Discharge Test metadata -->
+            <ng-container *ngIf="isDischargeTest(state.parsedData) && state.borehole">
+              <div><span class="text-gray-600 text-xs block">Client</span> <span class="font-medium text-sm">{{ state.borehole.client || 'N/A' }}</span></div>
+              <div><span class="text-gray-600 text-xs block">Contractor</span> <span class="font-medium text-sm">{{ state.borehole.contractor || 'N/A' }}</span></div>
+            </ng-container>
+          </div>
+          
+          <!-- Warning if fallback was used -->
+          <p *ngIf="state.validationResults?.warnings?.length" class="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+            <span class="font-bold">Recommendation:</span> Verify the Borehole No and Site Name. If they are incorrect or were missing from the file, please correct them above before saving.
+          </p>
+        </div>
+
+        <div *ngIf="isReport(state.parsedData)">
           <!-- Day Shift Tab -->
+
           <div *ngIf="state.activeTab === 'dayShift'" class="space-y-4">
             <h4 class="text-sm font-semibold text-gray-900">Day Shift Activities</h4>
             <div class="text-sm mb-2">

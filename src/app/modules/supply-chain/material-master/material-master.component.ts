@@ -156,6 +156,16 @@ export class MaterialMasterComponent implements OnInit {
     return { status: 'In Stock', color: 'text-green-600 bg-green-50' };
   }
 
+  getStockStatusClass(material: Material): string {
+    const currentStock = material.currentStock || 0;
+    if (currentStock <= material.minStockLevel) {
+      return 'inactive';
+    } else if (material.maxStockLevel && currentStock >= material.maxStockLevel) {
+      return 'pending';
+    }
+    return 'active';
+  }
+
   formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

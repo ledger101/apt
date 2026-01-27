@@ -1,0 +1,87 @@
+@import 'variables';
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mb-1 {
+    margin-bottom: $spacing-1;
+}
+
+.mb-2 {
+    margin-bottom: $spacing-2;
+}
+
+.mb-4 {
+    margin-bottom: $spacing-4;
+}
+
+.mb-6 {
+    margin-bottom: $spacing-6;
+}
+
+.mt-1 {
+    margin-top: $spacing-1;
+}
+
+.mt-2 {
+    margin-top: $spacing-2;
+}
+
+.mt-4 {
+    margin-top: $spacing-4;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.align-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-2 {
+    gap: $spacing-2;
+}
+
+.gap-4 {
+    gap: $spacing-4;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+.block {
+    display: block;
+}
+
+// Skip to content link (accessibility)
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: $primary-500;
+    color: $primary-content;
+    padding: $spacing-2 $spacing-4;
+    text-decoration: none;
+    font-weight: $font-semibold;
+    z-index: 9999;
+    border-radius: 0 0 4px 0;
+
+    &:focus {
+        top: 0;
+    }
+}

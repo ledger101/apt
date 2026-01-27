@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router } from '@angular/router';
 import { FleetService } from '../../../services/fleet.service';
 import { Vehicle, Rig } from '../../../models';
+import { AlertComponent } from '../../../components/alert/alert.component';
 
 interface AssetRegisterState {
   isLoading: boolean;
@@ -19,7 +20,7 @@ interface AssetRegisterState {
 @Component({
   selector: 'app-asset-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, AlertComponent],
   templateUrl: './asset-register.component.html',
   styleUrls: ['./asset-register.component.scss']
 })

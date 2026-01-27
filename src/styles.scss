@@ -2,4 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* You can add global styles to this file, and also import other style files */
+@import 'styles/variables';
+@import 'styles/mixins';
+@import 'styles/base';
+@import 'styles/components';
+@import 'styles/utilities';
+@import 'styles/responsive';

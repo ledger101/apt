@@ -1,0 +1,105 @@
+<div class="container mx-auto px-4 py-6">
+  <!-- Module Header -->
+  <div class="mb-8">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getIconPath('truck')"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Fleet & Equipment</h1>
+        <p class="text-gray-600">Manage vehicles, rigs, and maintenance schedules</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div *ngFor="let card of summaryCards" class="card">
+      <div class="flex items-start justify-between">
+        <div class="flex-1">
+          <p class="text-sm text-gray-600 mb-1">{{ card.label }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ card.value }}</p>
+          <p class="text-xs text-gray-500 mt-1">{{ card.trend }}</p>
+        </div>
+        <div class="module-icon-wrapper" [ngClass]="card.color">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getIconPath(card.icon)"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <button
+        *ngFor="let action of quickActions"
+        (click)="navigateTo(action.route)"
+        class="card text-left hover:shadow-lg transition-shadow cursor-pointer group"
+      >
+        <div class="flex items-start gap-3">
+          <div class="module-icon-wrapper" [ngClass]="action.color">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getIconPath(action.icon)"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-yellow-600 transition-colors">
+              {{ action.title }}
+            </h3>
+            <p class="text-sm text-gray-600">{{ action.description }}</p>
+          </div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Recent Activity Section -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">Recent Fleet Activity</h2>
+    <div class="card">
+      <div class="space-y-4">
+        <div class="flex items-start gap-3 pb-4 border-b border-gray-100">
+          <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-900">Vehicle Service Completed</p>
+            <p class="text-sm text-gray-600">Toyota Hilux (ABC-123) - 5000km service</p>
+            <p class="text-xs text-gray-500 mt-1">2 hours ago</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 pb-4 border-b border-gray-100">
+          <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-900">Maintenance Due Soon</p>
+            <p class="text-sm text-gray-600">Rig-001 service due in 50 hours</p>
+            <p class="text-xs text-gray-500 mt-1">5 hours ago</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-900">New Vehicle Registered</p>
+            <p class="text-sm text-gray-600">Ford Ranger (XYZ-789) added to fleet</p>
+            <p class="text-xs text-gray-500 mt-1">1 day ago</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

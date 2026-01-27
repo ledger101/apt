@@ -1,0 +1,49 @@
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+  <div class="navbar-container">
+    <a routerLink="/" class="navbar-brand" aria-label="APT Home">
+      <span class="brand-text">APT</span>
+    </a>
+
+    <button 
+      class="navbar-toggler" 
+      (click)="toggleMenu()" 
+      aria-label="Toggle navigation menu"
+      [attr.aria-expanded]="isMenuOpen"
+      aria-controls="main-menu"
+    >
+      <span class="toggler-icon" aria-hidden="true"></span>
+      <span class="toggler-icon" aria-hidden="true"></span>
+      <span class="toggler-icon" aria-hidden="true"></span>
+    </button>
+
+    <div class="navbar-menu" [class.active]="isMenuOpen" id="main-menu">
+      <ul class="navbar-nav" role="menubar">
+        <li class="nav-item" role="none">
+          <a routerLink="/dashboard" routerLinkActive="active" class="nav-link" role="menuitem">Dashboard</a>
+        </li>
+        <li class="nav-item" role="none">
+          <a routerLink="/financial" routerLinkActive="active" class="nav-link" role="menuitem">Financial</a>
+        </li>
+        <li class="nav-item" role="none">
+          <a routerLink="/fleet" routerLinkActive="active" class="nav-link" role="menuitem">Fleet</a>
+        </li>
+        <li class="nav-item" role="none">
+          <a routerLink="/supply-chain" routerLinkActive="active" class="nav-link" role="menuitem">Supply Chain</a>
+        </li>
+        <li class="nav-item" role="none">
+          <a routerLink="/personnel" routerLinkActive="active" class="nav-link" role="menuitem">Personnel</a>
+        </li>
+        <li class="nav-item" role="none">
+          <a routerLink="/ohs" routerLinkActive="active" class="nav-link" role="menuitem">OHS</a>
+        </li>
+         <li class="nav-item" role="none">
+          <a routerLink="/operations" routerLinkActive="active" class="nav-link" role="menuitem">Operations</a>
+        </li>
+      </ul>
+      
+      <div class="navbar-profile">
+        <button class="btn btn-primary btn-sm" aria-label="User profile">Profile</button>
+      </div>
+    </div>
+  </div>
+</nav>

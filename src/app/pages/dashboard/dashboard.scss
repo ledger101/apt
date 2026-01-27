@@ -1,0 +1,74 @@
+@import '../../../styles/variables';
+@import '../../../styles/mixins';
+
+.module-card {
+    background: $background-white;
+    border: 1px solid $border;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 200ms ease-in-out;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+
+    &:hover {
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.15); // Yellow glow
+        border-color: $primary-500;
+    }
+
+    &:focus-visible {
+        outline: 3px solid $primary-500;
+        outline-offset: 2px;
+    }
+}
+
+.module-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+
+    &.blue {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #2563EB;
+    }
+
+    &.green {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+
+    &.purple {
+        background-color: rgba(139, 92, 246, 0.1);
+        color: #7C3AED;
+    }
+
+    &.yellow {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: #D97706;
+    }
+
+    &.red {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #DC2626;
+    }
+}
+
+.module-title {
+    font-family: $font-family-heading;
+    font-size: $text-lg;
+    font-weight: $font-semibold;
+    color: $text-primary;
+    margin-bottom: 8px;
+}
+
+.module-description {
+    font-family: $font-family-body;
+    font-size: $text-sm;
+    color: $text-secondary;
+    margin-bottom: 16px;
+}
