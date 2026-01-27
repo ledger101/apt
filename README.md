@@ -54,6 +54,24 @@ ng e2e
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
+## UI/UX Improvement System
+
+This project includes an AI-powered UI/UX improvement system with planning and implementation agents.
+
+### Quick Start
+
+1. **Review Available Skills**: See `SKILLS.md` for UI/UX design capabilities
+2. **Create Improvement Plan**: Use the UI/UX Planning Agent to analyze and plan improvements
+3. **Implement Changes**: Hand off the plan to an implementation agent
+
+For detailed instructions, see `UI-UX-AGENT-GUIDE.md`
+
+### Agent System
+
+- **Planning Agent**: `.agent/agents/uiux-planner.md` - Creates comprehensive improvement plans
+- **UI/UX Skills**: `.agent/skills/ui-ux-pro-max/` - Design system generation and best practices
+- **Documentation**: `SKILLS.md` and `UI-UX-AGENT-GUIDE.md`
+
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
