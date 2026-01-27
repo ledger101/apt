@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to get user orgId
+    function getUserOrgId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId;
+    }
+
+    // Users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Organizations: users can read their org
+    match /organizations/{orgId} {
+      allow read: if request.auth != null && getUserOrgId() == orgId;
+    }
+
+    // Projects: within org
+    match /organizations/{orgId}/projects/{projectId} {
+      allow read: if request.auth != null && getUserOrgId() == orgId;
+    }
+
+    // Sites: within org
+    match /organizations/{orgId}/sites/{siteId} {
+      allow read: if request.auth != null && getUserOrgId() == orgId;
+    }
+
+    // Rigs: within org
+    match /organizations/{orgId}/rigs/{rigId} {
+      allow read: if request.auth != null && getUserOrgId() == orgId;
+    }
+
+    // Reports: SM can create/submit, OM can read/update status
+    match /reports/{reportId} {
+      allow read: if request.auth != null && resource.data.orgId == getUserOrgId();
+      allow create: if request.auth != null &&
+        request.auth.token.role == 'SM' &&
+        request.resource.data.orgId == getUserOrgId();
+      allow update: if request.auth != null &&
+        resource.data.orgId == getUserOrgId() &&
+        (request.auth.token.role == 'SM' || request.auth.token.role == 'OM');
+    }
+
+    // Subcollections for shifts/activities/personnel
+    match /reports/{reportId}/{document=**} {
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/reports/$(reportId)).data.orgId == getUserOrgId();
+    }
+
+    // Materials: OM can create/update, all org users can read
+    match /materials/{materialId} {
+      allow read: if request.auth != null && resource.data.orgId == getUserOrgId();
+      allow create, update: if request.auth != null &&
+        request.auth.token.role == 'OM' &&
+        request.resource.data.orgId == getUserOrgId();
+    }
+
+    // Requisitions: SM can create, OM can read/update/approve
+    match /requisitions/{requisitionId} {
+      allow read: if request.auth != null && resource.data.orgId == getUserOrgId();
+      allow create: if request.auth != null &&
+        request.auth.token.role == 'SM' &&
+        request.resource.data.orgId == getUserOrgId();
+      allow update: if request.auth != null &&
+        resource.data.orgId == getUserOrgId() &&
+        (request.auth.token.role == 'SM' || request.auth.token.role == 'OM');
+    }
+
+    // Inventory Transactions: SM can create (for drawdowns), OM can read/update
+    match /inventoryTransactions/{transactionId} {
+      allow read: if request.auth != null && resource.data.orgId == getUserOrgId();
+      allow create: if request.auth != null &&
+        request.auth.token.role == 'SM' &&
+        request.resource.data.orgId == getUserOrgId();
+      allow update: if request.auth != null &&
+        resource.data.orgId == getUserOrgId() &&
+        request.auth.token.role == 'OM';
+    }
+  }
+}

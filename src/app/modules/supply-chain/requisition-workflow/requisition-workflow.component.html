@@ -1,0 +1,357 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 py-6 pt-24">
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Requisition Workflow</h1>
+      <p class="text-gray-600">Manage material and equipment requisitions</p>
+    </div>
+    <button
+      (click)="showAddForm()"
+      class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+    >
+      New Requisition
+    </button>
+  </div>
+
+  <!-- Requisition Form -->
+  <div *ngIf="showForm" class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">
+      {{ isEditing ? 'Edit Requisition' : 'Create New Requisition' }}
+    </h2>
+
+    <form [formGroup]="requisitionForm" (ngSubmit)="saveRequisition()" class="space-y-6">
+      <!-- Basic Information -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
+            Title *
+          </label>
+          <input
+            type="text"
+            id="title"
+            formControlName="title"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Requisition title"
+          />
+        </div>
+
+        <div>
+          <label for="type" class="block text-sm font-medium text-gray-700 mb-1">
+            Type *
+          </label>
+          <select
+            id="type"
+            formControlName="type"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option *ngFor="let type of types" [value]="type">
+              {{ type }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label for="projectId" class="block text-sm font-medium text-gray-700 mb-1">
+            Project ID *
+          </label>
+          <input
+            type="text"
+            id="projectId"
+            formControlName="projectId"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., PROJ-001"
+          />
+        </div>
+
+        <div>
+          <label for="siteId" class="block text-sm font-medium text-gray-700 mb-1">
+            Site ID *
+          </label>
+          <input
+            type="text"
+            id="siteId"
+            formControlName="siteId"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., SITE-001"
+          />
+        </div>
+
+        <div>
+          <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">
+            Priority *
+          </label>
+          <select
+            id="priority"
+            formControlName="priority"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option *ngFor="let priority of priorities" [value]="priority">
+              {{ priority }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label for="requiredDate" class="block text-sm font-medium text-gray-700 mb-1">
+            Required Date *
+          </label>
+          <input
+            type="date"
+            id="requiredDate"
+            formControlName="requiredDate"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+          Description *
+        </label>
+        <textarea
+          id="description"
+          formControlName="description"
+          rows="3"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Detailed description of the requisition"
+        ></textarea>
+      </div>
+
+      <!-- Items -->
+      <div>
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-lg font-medium">Items</h3>
+          <button
+            type="button"
+            (click)="addItem()"
+            class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            + Add Item
+          </button>
+        </div>
+
+        <div formArrayName="items" class="space-y-4">
+          <div
+            *ngFor="let item of items.controls; let i = index"
+            [formGroupName]="i"
+            class="border border-gray-200 rounded-md p-4"
+          >
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Material *
+                </label>
+                <select
+                  formControlName="materialId"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Material</option>
+                  <option *ngFor="let material of materials" [value]="material.materialId">
+                    {{ material.name }} ({{ material.code }})
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  formControlName="quantity"
+                  step="0.01"
+                  min="0.01"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Purpose *
+                </label>
+                <input
+                  type="text"
+                  formControlName="purpose"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Usage purpose"
+                />
+              </div>
+
+              <div class="flex items-end">
+                <button
+                  type="button"
+                  (click)="removeItem(i)"
+                  [disabled]="items.length === 1"
+                  class="px-3 py-2 text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <input
+                type="text"
+                formControlName="notes"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Optional notes for this item"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
+          Additional Notes
+        </label>
+        <textarea
+          id="notes"
+          formControlName="notes"
+          rows="2"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Any additional notes or instructions"
+        ></textarea>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex justify-end space-x-3">
+        <button
+          type="button"
+          (click)="cancelEdit()"
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          [disabled]="requisitionForm.invalid || isLoading"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span *ngIf="isLoading">Saving...</span>
+          <span *ngIf="!isLoading">{{ isEditing ? 'Update' : 'Create' }} Requisition</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Requisitions List -->
+  <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div *ngIf="isLoading" class="text-center py-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <p class="mt-2 text-gray-600">Loading requisitions...</p>
+    </div>
+
+    <div *ngIf="!isLoading" class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Title
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Type
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Priority
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Total Value
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Required Date
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr *ngFor="let req of requisitions" class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900">{{ req.title }}</div>
+              <div class="text-sm text-gray-500">{{ req.description.substring(0, 50) }}...</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ req.type }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold {{ getPriorityColor(req.priority) }}">
+                {{ req.priority }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ getStatusColor(req.status) }}">
+                {{ req.status }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ formatCurrency(req.totalValue) }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ formatDate(req.requiredDate) }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <button
+                (click)="editRequisition(req)"
+                class="text-blue-600 hover:text-blue-900 mr-3"
+              >
+                Edit
+              </button>
+              <button
+                *ngIf="req.status === 'Draft'"
+                (click)="submitRequisition(req)"
+                class="text-green-600 hover:text-green-900 mr-3"
+              >
+                Submit
+              </button>
+              <button
+                (click)="deleteRequisition(req)"
+                class="text-red-600 hover:text-red-900"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="requisitions.length === 0" class="text-center py-8 text-gray-500">
+        No requisitions found. Click "New Requisition" to create your first requisition.
+      </div>
+    </div>
+  </div>
+</div>

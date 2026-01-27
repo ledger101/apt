@@ -1,0 +1,47 @@
+/* Tab Navigation */
+.tab-button {
+  @apply px-4 py-2 text-sm font-medium rounded-md transition-colors;
+}
+
+.tab-button.active {
+  @apply bg-white text-gray-900 shadow-sm;
+}
+
+.tab-button:not(.active) {
+  @apply text-gray-600 hover:text-gray-900 hover:bg-gray-200;
+}
+
+/* Form Inputs */
+.form-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+.form-input:invalid:not(:placeholder-shown) {
+  @apply border-red-300 focus:ring-red-500 focus:border-red-500;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+}
+
+/* Status Classes */
+.status-active {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-standby {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.status-maintenance {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-breakdown {
+  @apply bg-red-100 text-red-800;
+}
+
+.status-out-of-service {
+  @apply bg-gray-100 text-gray-800;
+}

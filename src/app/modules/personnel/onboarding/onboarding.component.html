@@ -1,0 +1,278 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-6xl mx-auto p-6 pt-24">
+  <!-- Header -->
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold text-gray-900">Employee Onboarding</h2>
+    <p class="mt-2 text-sm text-gray-600">
+      Create new employee profiles and manage certifications.
+    </p>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="state.success" class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <p class="text-sm font-medium text-green-800">{{ state.success }}</p>
+      </div>
+      <div class="ml-auto pl-3">
+        <button (click)="clearMessages()" class="text-green-400 hover:text-green-600">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="state.error" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+    <div class="flex">
+      <div class="flex-shrink-0">
+        <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <p class="text-sm font-medium text-red-800">{{ state.error }}</p>
+      </div>
+      <div class="ml-auto pl-3">
+        <button (click)="clearMessages()" class="text-red-400 hover:text-red-600">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- New Employee Form -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Add New Employee</h3>
+
+      <form [formGroup]="state.employeeForm" (ngSubmit)="onEmployeeSubmit()" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">First Name</label>
+            <input
+              type="text"
+              formControlName="firstName"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              [class.border-red-500]="state.employeeForm.get('firstName')?.invalid && state.employeeForm.get('firstName')?.touched"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Last Name</label>
+            <input
+              type="text"
+              formControlName="lastName"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              [class.border-red-500]="state.employeeForm.get('lastName')?.invalid && state.employeeForm.get('lastName')?.touched"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email</label>
+          <input
+            type="email"
+            formControlName="email"
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            [class.border-red-500]="state.employeeForm.get('email')?.invalid && state.employeeForm.get('email')?.touched"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Phone</label>
+          <input
+            type="tel"
+            formControlName="phone"
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Position</label>
+            <input
+              type="text"
+              formControlName="position"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              [class.border-red-500]="state.employeeForm.get('position')?.invalid && state.employeeForm.get('position')?.touched"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Department</label>
+            <input
+              type="text"
+              formControlName="department"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              [class.border-red-500]="state.employeeForm.get('department')?.invalid && state.employeeForm.get('department')?.touched"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Hire Date</label>
+          <input
+            type="date"
+            formControlName="hireDate"
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            [class.border-red-500]="state.employeeForm.get('hireDate')?.invalid && state.employeeForm.get('hireDate')?.touched"
+          >
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="state.isLoading || state.employeeForm.invalid"
+          class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          {{ state.isLoading ? 'Creating...' : 'Create Employee' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- Certification Management -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Add Certification</h3>
+
+      <!-- Employee Selection -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select Employee</label>
+        <select
+          (change)="onEmployeeSelect($event)"
+          class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="">Choose an employee...</option>
+          <option *ngFor="let employee of state.employees; let i = index" [value]="i">
+            {{ employee.firstName }} {{ employee.lastName }} - {{ employee.position }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Selected Employee Info -->
+      <div *ngIf="state.selectedEmployee" class="mb-4 p-3 bg-gray-50 rounded-md">
+        <p class="text-sm font-medium">{{ state.selectedEmployee.firstName }} {{ state.selectedEmployee.lastName }}</p>
+        <p class="text-xs text-gray-600">{{ state.selectedEmployee.position }} • {{ state.selectedEmployee.department }}</p>
+      </div>
+
+      <form [formGroup]="state.certificationForm" (ngSubmit)="onCertificationSubmit()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Certification Name</label>
+          <input
+            type="text"
+            formControlName="name"
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            [class.border-red-500]="state.certificationForm.get('name')?.invalid && state.certificationForm.get('name')?.touched"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Issuer</label>
+          <input
+            type="text"
+            formControlName="issuer"
+            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            [class.border-red-500]="state.certificationForm.get('issuer')?.invalid && state.certificationForm.get('issuer')?.touched"
+          >
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Issue Date</label>
+            <input
+              type="date"
+              formControlName="issueDate"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              [class.border-red-500]="state.certificationForm.get('issueDate')?.invalid && state.certificationForm.get('issueDate')?.touched"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Expiry Date (Optional)</label>
+            <input
+              type="date"
+              formControlName="expiryDate"
+              class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="state.isLoading || !state.selectedEmployee || state.certificationForm.invalid"
+          class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+        >
+          {{ state.isLoading ? 'Adding...' : 'Add Certification' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Employee List -->
+  <div class="mt-8 bg-white border border-gray-200 rounded-lg p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Employee Directory</h3>
+
+    <div *ngIf="state.isLoading" class="text-center py-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <p class="mt-2 text-sm text-gray-600">Loading employees...</p>
+    </div>
+
+    <div *ngIf="!state.isLoading && state.employees.length === 0" class="text-center py-8">
+      <p class="text-gray-500">No employees found. Create your first employee above.</p>
+    </div>
+
+    <div *ngIf="!state.isLoading && state.employees.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div *ngFor="let employee of state.employees" class="border border-gray-200 rounded-lg p-4">
+        <div class="flex items-start justify-between">
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900">{{ employee.firstName }} {{ employee.lastName }}</h4>
+            <p class="text-xs text-gray-600">{{ employee.position }}</p>
+            <p class="text-xs text-gray-500">{{ employee.department }}</p>
+            <p class="text-xs text-gray-500">{{ employee.email }}</p>
+          </div>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                [ngClass]="employee.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'">
+            {{ employee.status }}
+          </span>
+        </div>
+
+        <div *ngIf="employee.certifications && employee.certifications.length > 0" class="mt-3">
+          <p class="text-xs font-medium text-gray-700 mb-1">Certifications:</p>
+          <div class="space-y-1">
+            <div *ngFor="let cert of employee.certifications" class="text-xs text-gray-600">
+              {{ cert.name }} ({{ cert.issuer }})
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

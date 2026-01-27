@@ -1,0 +1,1448 @@
+import { Injectable } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  QueryConstraint,
+  DocumentData,
+  CollectionReference,
+  DocumentReference,
+  DocumentSnapshot,
+  Timestamp,
+  writeBatch,
+  WriteBatch
+} from '@angular/fire/firestore';
+import { Observable, from, map } from 'rxjs';
+import { Report } from '../models/pumping-data.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class FirestoreService {
+  // Commented out insurance-specific collections for pumping app adaptation
+  // private readonly INSTITUTIONS_COLLECTION = 'institutions';
+  // private readonly INCOME_STATEMENTS_SUBCOLLECTION = 'income_statements';
+  // private readonly FINANCIAL_POSITIONS_SUBCOLLECTION = 'financial_positions';
+  // private readonly BUSINESS_CLASS_PERFORMANCE_SUBCOLLECTION = 'business_class_performance';
+  // private readonly ASSET_BREAKDOWN_SUBCOLLECTION = 'asset_breakdown';
+  // private readonly DEMOGRAPHICS_SUBCOLLECTION = 'demographics';
+  // private readonly GOVERNANCE_SUBCOLLECTION = 'governance';
+  // private readonly AUDIT_LOGS_COLLECTION = 'audit_logs';
+
+  constructor(private firestore: Firestore) {
+    console.log('FirestoreService initialized');
+    console.log('Firestore instance:', this.firestore);
+  }
+
+  // ==================== CONNECTION TEST ====================
+
+  /**
+   * Test Firestore connection
+   */
+  // Commented out for pumping app adaptation - uses insurance collections
+  // async testConnection(): Promise<boolean> {
+  //   try {
+  //     console.log('Testing Firestore connection...');
+  //     const colRef = collection(this.firestore, this.INSTITUTIONS_COLLECTION);
+  //     const querySnapshot = await getDocs(query(colRef, limit(1)));
+  //     console.log('Connection test successful, can read from Firestore');
+  //     return true;
+  //   } catch (error: any) {
+  //     console.error('Connection test failed:', error);
+  //     return false;
+  //   }
+  // }
+
+  // ==================== INSTITUTIONS ====================
+  // COMMENTED OUT FOR PUMPING APP ADAPTATION - All insurance-specific methods disabled
+
+  /**
+   * Add a new institution
+   */
+  // COMMENTED OUT FOR PUMPING APP ADAPTATION
+  // async addInstitution(institution: Omit<Institution, 'id'>): Promise<string> {
+  //   try {
+  //     const institutionData = {
+  //       ...institution,
+  //       createdAt: Timestamp.now(),
+  //       updatedAt: Timestamp.now()
+  //     };
+  //     
+  //     // Use institution code + year + quarter as document ID
+  //     // Match the ID generation logic from excel-parsing.service.ts
+  //     const code = institution.institutionCode || institution.institutionName;
+  //     const docId = `${code.toUpperCase().replace(/\s+/g, '_')}_${institution.financialYear}_${institution.financialQuarter}`;
+  //     
+  //     console.log('FirestoreService: Creating institution document with ID:', docId);
+  //     console.log('FirestoreService: Institution code:', institution.institutionCode);
+  //     console.log('FirestoreService: Institution name:', institution.institutionName);
+  //     
+  //     const docRef = doc(this.firestore, this.INSTITUTIONS_COLLECTION, docId);
+  //     
+  //     await setDoc(docRef, institutionData);
+  //     return docId;
+  //   } catch (error) {
+  //     console.error('Error adding institution:', error);
+  //     throw error;
+  //   }
+  // }
+
+  /**
+   * Get a specific institution by ID
+   */
+  async getInstitution(institutionId: string): Promise<Institution | null> {
+    try {
+      const docRef = doc(this.firestore, this.INSTITUTIONS_COLLECTION, institutionId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Institution;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting institution:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all institutions
+   */
+  async getAllInstitutions(): Promise<Institution[]> {
+    try {
+      console.log('FirestoreService: Getting all institutions...');
+      const colRef = collection(this.firestore, this.INSTITUTIONS_COLLECTION);
+      console.log('FirestoreService: Collection reference created');
+      
+      const querySnapshot = await getDocs(colRef);
+      console.log('FirestoreService: Query executed, documents:', querySnapshot.size);
+      
+      const institutions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Institution[];
+      
+      console.log('FirestoreService: Institutions mapped:', institutions.length);
+      return institutions;
+    } catch (error: any) {
+      console.error('FirestoreService: Error getting all institutions:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get institutions by filters
+   */
+  async getInstitutionsByFilters(filters: {
+    financialYear?: number;
+    financialQuarter?: string;
+    businessType?: string;
+    status?: string;
+  }): Promise<Institution[]> {
+    try {
+      const colRef = collection(this.firestore, this.INSTITUTIONS_COLLECTION);
+      const constraints: QueryConstraint[] = [];
+
+      if (filters.financialYear) {
+        constraints.push(where('financialYear', '==', filters.financialYear));
+      }
+      if (filters.financialQuarter) {
+        constraints.push(where('financialQuarter', '==', filters.financialQuarter));
+      }
+      if (filters.businessType) {
+        constraints.push(where('businessType', '==', filters.businessType));
+      }
+      if (filters.status) {
+        constraints.push(where('status', '==', filters.status));
+      }
+
+      const q = query(colRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Institution[];
+    } catch (error) {
+      console.error('Error getting institutions by filters:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an institution
+   */
+  async updateInstitution(institutionId: string, data: Partial<Institution>): Promise<void> {
+    try {
+      const docRef = doc(this.firestore, this.INSTITUTIONS_COLLECTION, institutionId);
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating institution:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an institution (and optionally its subcollections)
+   */
+  async deleteInstitution(institutionId: string, deleteSubcollections: boolean = false): Promise<void> {
+    try {
+      if (deleteSubcollections) {
+        // Delete all subcollections first
+        await this.deleteAllIncomeStatements(institutionId);
+        await this.deleteAllFinancialPositions(institutionId);
+        await this.deleteAllBusinessClassPerformance(institutionId);
+        await this.deleteAllAssetBreakdown(institutionId);
+      }
+      
+      const docRef = doc(this.firestore, this.INSTITUTIONS_COLLECTION, institutionId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error('Error deleting institution:', error);
+      throw error;
+    }
+  }
+
+  // ==================== INCOME STATEMENTS ====================
+
+  /**
+   * Add income statement to an institution
+   */
+  async addIncomeStatement(institutionId: string, incomeStatement: Omit<IncomeStatement, 'id'>): Promise<string> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.INCOME_STATEMENTS_SUBCOLLECTION
+      );
+      
+      const data = {
+        ...incomeStatement,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding income statement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get income statement by period
+   */
+  async getIncomeStatement(institutionId: string, periodId: string): Promise<IncomeStatement | null> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.INCOME_STATEMENTS_SUBCOLLECTION
+      );
+      
+      const q = query(colRef, where('periodId', '==', periodId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as IncomeStatement;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting income statement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all income statements for an institution
+   */
+  async getAllIncomeStatements(institutionId: string): Promise<IncomeStatement[]> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.INCOME_STATEMENTS_SUBCOLLECTION
+      );
+      
+      const querySnapshot = await getDocs(colRef);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as IncomeStatement[];
+    } catch (error) {
+      console.error('Error getting all income statements:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update income statement
+   */
+  async updateIncomeStatement(
+    institutionId: string,
+    incomeStatementId: string,
+    data: Partial<IncomeStatement>
+  ): Promise<void> {
+    try {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.INCOME_STATEMENTS_SUBCOLLECTION,
+        incomeStatementId
+      );
+      
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating income statement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all income statements for an institution
+   */
+  private async deleteAllIncomeStatements(institutionId: string): Promise<void> {
+    const statements = await this.getAllIncomeStatements(institutionId);
+    const deletePromises = statements.map(stmt => {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.INCOME_STATEMENTS_SUBCOLLECTION,
+        stmt.id!
+      );
+      return deleteDoc(docRef);
+    });
+    await Promise.all(deletePromises);
+  }
+
+  // ==================== FINANCIAL POSITIONS ====================
+
+  /**
+   * Add financial position to an institution
+   */
+  async addFinancialPosition(institutionId: string, financialPosition: Omit<FinancialPosition, 'id'>): Promise<string> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.FINANCIAL_POSITIONS_SUBCOLLECTION
+      );
+      
+      const data = {
+        ...financialPosition,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding financial position:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get financial position by period
+   */
+  async getFinancialPosition(institutionId: string, periodId: string): Promise<FinancialPosition | null> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.FINANCIAL_POSITIONS_SUBCOLLECTION
+      );
+      
+      const q = query(colRef, where('periodId', '==', periodId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        console.log(doc)
+        return { id: doc.id, ...doc.data() } as FinancialPosition;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting financial position:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all financial positions for an institution
+   */
+  async getAllFinancialPositions(institutionId: string): Promise<FinancialPosition[]> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.FINANCIAL_POSITIONS_SUBCOLLECTION
+      );
+      
+      const querySnapshot = await getDocs(colRef);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FinancialPosition[];
+    } catch (error) {
+      console.error('Error getting all financial positions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update financial position
+   */
+  async updateFinancialPosition(
+    institutionId: string,
+    financialPositionId: string,
+    data: Partial<FinancialPosition>
+  ): Promise<void> {
+    try {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.FINANCIAL_POSITIONS_SUBCOLLECTION,
+        financialPositionId
+      );
+      
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating financial position:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all financial positions for an institution
+   */
+  private async deleteAllFinancialPositions(institutionId: string): Promise<void> {
+    const positions = await this.getAllFinancialPositions(institutionId);
+    const deletePromises = positions.map(pos => {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.FINANCIAL_POSITIONS_SUBCOLLECTION,
+        pos.id!
+      );
+      return deleteDoc(docRef);
+    });
+    await Promise.all(deletePromises);
+  }
+
+  // ==================== BUSINESS CLASS PERFORMANCE ====================
+
+  /**
+   * Add business class performance data
+   */
+  async addBusinessClassPerformance(
+    institutionId: string,
+    performance: Omit<BusinessClassPerformance, 'id'>
+  ): Promise<string> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.BUSINESS_CLASS_PERFORMANCE_SUBCOLLECTION
+      );
+      
+      const data = {
+        ...performance,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding business class performance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all business class performance data for an institution and period
+   */
+  async getBusinessClassPerformance(institutionId: string, periodId: string): Promise<BusinessClassPerformance[]> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.BUSINESS_CLASS_PERFORMANCE_SUBCOLLECTION
+      );
+      
+      const q = query(colRef, where('periodId', '==', periodId));
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as BusinessClassPerformance[];
+    } catch (error) {
+      console.error('Error getting business class performance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update business class performance
+   */
+  async updateBusinessClassPerformance(
+    institutionId: string,
+    performanceId: string,
+    data: Partial<BusinessClassPerformance>
+  ): Promise<void> {
+    try {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.BUSINESS_CLASS_PERFORMANCE_SUBCOLLECTION,
+        performanceId
+      );
+      
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating business class performance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all business class performance for an institution
+   */
+  private async deleteAllBusinessClassPerformance(institutionId: string): Promise<void> {
+    const colRef = collection(
+      this.firestore,
+      this.INSTITUTIONS_COLLECTION,
+      institutionId,
+      this.BUSINESS_CLASS_PERFORMANCE_SUBCOLLECTION
+    );
+    const querySnapshot = await getDocs(colRef);
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+  }
+
+  // ==================== ASSET BREAKDOWN ====================
+
+  /**
+   * Add asset breakdown data
+   */
+  async addAssetBreakdown(institutionId: string, asset: Omit<AssetBreakdown, 'id'>): Promise<string> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.ASSET_BREAKDOWN_SUBCOLLECTION
+      );
+      
+      const data = {
+        ...asset,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding asset breakdown:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get asset breakdown for an institution and period
+   */
+  async getAssetBreakdown(institutionId: string, periodId: string): Promise<AssetBreakdown[]> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.ASSET_BREAKDOWN_SUBCOLLECTION
+      );
+      
+      const q = query(colRef, where('periodId', '==', periodId));
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AssetBreakdown[];
+    } catch (error) {
+      console.error('Error getting asset breakdown:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update asset breakdown
+   */
+  async updateAssetBreakdown(
+    institutionId: string,
+    assetId: string,
+    data: Partial<AssetBreakdown>
+  ): Promise<void> {
+    try {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.ASSET_BREAKDOWN_SUBCOLLECTION,
+        assetId
+      );
+      
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating asset breakdown:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete all asset breakdown for an institution
+   */
+  private async deleteAllAssetBreakdown(institutionId: string): Promise<void> {
+    const colRef = collection(
+      this.firestore,
+      this.INSTITUTIONS_COLLECTION,
+      institutionId,
+      this.ASSET_BREAKDOWN_SUBCOLLECTION
+    );
+    const querySnapshot = await getDocs(colRef);
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+  }
+
+  // ==================== BATCH OPERATIONS ====================
+
+  /**
+   * Save complete institution data (all subcollections at once)
+   */
+  async saveCompleteInstitutionData(data: {
+    institution: Omit<Institution, 'id'>;
+    incomeStatement: Omit<IncomeStatement, 'id'>;
+    financialPosition: Omit<FinancialPosition, 'id'>;
+    businessClassPerformance: Omit<BusinessClassPerformance, 'id'>[];
+    assetBreakdown: Omit<AssetBreakdown, 'id'>[];
+    demographics?: Omit<Demographics, 'id'>;
+    governance?: Omit<Governance, 'id'>;
+  }): Promise<string> {
+    try {
+      // Add institution first
+      const institutionId = await this.addInstitution(data.institution);
+
+      // Add all subcollections
+      await Promise.all([
+        this.addIncomeStatement(institutionId, data.incomeStatement),
+        this.addFinancialPosition(institutionId, data.financialPosition),
+        ...data.businessClassPerformance.map(perf => 
+          this.addBusinessClassPerformance(institutionId, perf)
+        ),
+        ...data.assetBreakdown.map(asset => 
+          this.addAssetBreakdown(institutionId, asset)
+        )
+      ]);
+
+      return institutionId;
+    } catch (error) {
+      console.error('Error saving complete institution data:', error);
+      throw error;
+    }
+  }
+
+  // ==================== AGGREGATION QUERIES ====================
+
+  /**
+   * Get all institutions for a specific period (year + quarter)
+   */
+  async getInstitutionsForPeriod(year: number, quarter: string): Promise<Institution[]> {
+    return this.getInstitutionsByFilters({ financialYear: year, financialQuarter: quarter });
+  }
+
+  /**
+   * Get aggregated income statements for all institutions in a period
+   */
+  async getAggregatedIncomeStatements(year: number, quarter: string): Promise<IncomeStatement[]> {
+    try {
+      const institutions = await this.getInstitutionsForPeriod(year, quarter);
+      const periodId = `${year}_${quarter}`;
+      
+      const statements = await Promise.all(
+        institutions.map(inst => this.getIncomeStatement(inst.id, periodId))
+      );
+      
+      return statements.filter((stmt: any) => stmt !== null) as IncomeStatement[];
+    } catch (error) {
+      console.error('Error getting aggregated income statements:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get aggregated financial positions for all institutions in a period
+   */
+  async getAggregatedFinancialPositions(year: number, quarter: string): Promise<FinancialPosition[]> {
+    try {
+      const institutions = await this.getInstitutionsForPeriod(year, quarter);
+      const periodId = `${year}_${quarter}`;
+      
+      const positions = await Promise.all(
+        institutions.map(inst => this.getFinancialPosition(inst.id, periodId))
+      );
+      
+      return positions.filter((pos: any) => pos !== null) as FinancialPosition[];
+    } catch (error) {
+      console.error('Error getting aggregated financial positions:', error);
+      throw error;
+    }
+  }
+
+  // ==================== AUDIT LOGS ====================
+
+  /**
+   * Add audit log entry
+   */
+  async addAuditLog(auditLog: Omit<AuditLog, 'id'>): Promise<string> {
+    try {
+      const colRef = collection(this.firestore, this.AUDIT_LOGS_COLLECTION);
+      const data = {
+        ...auditLog,
+        timestamp: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding audit log:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get audit logs for an entity
+   */
+  async getAuditLogs(entityId: string, limitCount: number = 50): Promise<AuditLog[]> {
+    try {
+      const colRef = collection(this.firestore, this.AUDIT_LOGS_COLLECTION);
+      const q = query(
+        colRef,
+        where('entityId', '==', entityId),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AuditLog[];
+    } catch (error) {
+      console.error('Error getting audit logs:', error);
+      throw error;
+    }
+  }
+
+  // ==================== DEMOGRAPHICS (OPTIONAL) ====================
+
+  /**
+   * Add demographics data
+   */
+  async addDemographics(institutionId: string, demographics: Omit<Demographics, 'id'>): Promise<string> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.DEMOGRAPHICS_SUBCOLLECTION
+      );
+      
+      const data = {
+        ...demographics,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding demographics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get demographics by period
+   */
+  async getDemographics(institutionId: string, periodId: string): Promise<Demographics | null> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.DEMOGRAPHICS_SUBCOLLECTION
+      );
+      
+      const q = query(colRef, where('periodId', '==', periodId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as Demographics;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting demographics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update demographics
+   */
+  async updateDemographics(
+    institutionId: string,
+    demographicsId: string,
+    data: Partial<Demographics>
+  ): Promise<void> {
+    try {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.DEMOGRAPHICS_SUBCOLLECTION,
+        demographicsId
+      );
+      
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating demographics:', error);
+      throw error;
+    }
+  }
+
+  // ==================== GOVERNANCE (OPTIONAL) ====================
+
+  /**
+   * Add governance data
+   */
+  async addGovernance(institutionId: string, governance: Omit<Governance, 'id'>): Promise<string> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.GOVERNANCE_SUBCOLLECTION
+      );
+      
+      const data = {
+        ...governance,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+      
+      const docRef = await addDoc(colRef, data);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding governance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get governance by period
+   */
+  async getGovernance(institutionId: string, periodId: string): Promise<Governance | null> {
+    try {
+      const colRef = collection(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.GOVERNANCE_SUBCOLLECTION
+      );
+      
+      const q = query(colRef, where('periodId', '==', periodId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as Governance;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting governance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update governance
+   */
+  async updateGovernance(
+    institutionId: string,
+    governanceId: string,
+    data: Partial<Governance>
+  ): Promise<void> {
+    try {
+      const docRef = doc(
+        this.firestore,
+        this.INSTITUTIONS_COLLECTION,
+        institutionId,
+        this.GOVERNANCE_SUBCOLLECTION,
+        governanceId
+      );
+      
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Error updating governance:', error);
+      throw error;
+    }
+  }
+
+  // ==================== ENHANCED BATCH OPERATIONS ====================
+
+  /**
+   * Save complete institution data package using batch writes
+   */
+  async saveInstitutionDataPackage(dataPackage: InstitutionDataPackage): Promise<string> {
+    try {
+      // First create/update the institution
+      const institutionId = await this.addInstitution(dataPackage.institution);
+
+      // Use batch for subcollections
+      const batch = writeBatch(this.firestore);
+      
+      // Add income statement
+      const incomeRef = doc(
+        collection(
+          this.firestore,
+          this.INSTITUTIONS_COLLECTION,
+          institutionId,
+          this.INCOME_STATEMENTS_SUBCOLLECTION
+        )
+      );
+      batch.set(incomeRef, {
+        ...dataPackage.incomeStatement,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+
+      // Add financial position
+      const positionRef = doc(
+        collection(
+          this.firestore,
+          this.INSTITUTIONS_COLLECTION,
+          institutionId,
+          this.FINANCIAL_POSITIONS_SUBCOLLECTION
+        )
+      );
+      batch.set(positionRef, {
+        ...dataPackage.financialPosition,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+
+      // Add business class performances
+      dataPackage.businessClassPerformances.forEach((perf: any) => {
+        const perfRef = doc(
+          collection(
+            this.firestore,
+            this.INSTITUTIONS_COLLECTION,
+            institutionId,
+            this.BUSINESS_CLASS_PERFORMANCE_SUBCOLLECTION
+          )
+        );
+        batch.set(perfRef, {
+          ...perf,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      });
+
+      // Add asset breakdowns
+      dataPackage.assetBreakdowns.forEach((asset: any) => {
+        const assetRef = doc(
+          collection(
+            this.firestore,
+            this.INSTITUTIONS_COLLECTION,
+            institutionId,
+            this.ASSET_BREAKDOWN_SUBCOLLECTION
+          )
+        );
+        batch.set(assetRef, {
+          ...asset,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      });
+
+      // Add optional demographics
+      if (dataPackage.demographics) {
+        const demoRef = doc(
+          collection(
+            this.firestore,
+            this.INSTITUTIONS_COLLECTION,
+            institutionId,
+            this.DEMOGRAPHICS_SUBCOLLECTION
+          )
+        );
+        batch.set(demoRef, {
+          ...dataPackage.demographics,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      }
+
+      // Add optional governance
+      if (dataPackage.governance) {
+        const govRef = doc(
+          collection(
+            this.firestore,
+            this.INSTITUTIONS_COLLECTION,
+            institutionId,
+            this.GOVERNANCE_SUBCOLLECTION
+          )
+        );
+        batch.set(govRef, {
+          ...dataPackage.governance,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      }
+
+      // Commit batch
+      await batch.commit();
+
+      return institutionId;
+    } catch (error) {
+      console.error('Error saving institution data package:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get complete institution data package
+   */
+  async getInstitutionDataPackage(institutionId: string, periodId: string): Promise<InstitutionDataPackage | null> {
+    try {
+      const institution = await this.getInstitution(institutionId);
+      if (!institution) return null;
+
+      const [
+        incomeStatement,
+        financialPosition,
+        businessClassPerformances,
+        assetBreakdowns,
+        demographics,
+        governance
+      ] = await Promise.all([
+        this.getIncomeStatement(institutionId, periodId),
+        this.getFinancialPosition(institutionId, periodId),
+        this.getBusinessClassPerformance(institutionId, periodId),
+        this.getAssetBreakdown(institutionId, periodId),
+        this.getDemographics(institutionId, periodId),
+        this.getGovernance(institutionId, periodId)
+      ]);
+
+      if (!incomeStatement || !financialPosition) {
+        return null;
+      }
+
+      return {
+        institution,
+        incomeStatement,
+        financialPosition,
+        businessClassPerformances,
+        assetBreakdowns,
+        demographics: demographics || undefined,
+        governance: governance || undefined
+      };
+    } catch (error) {
+      console.error('Error getting institution data package:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update institution data package
+   */
+  async updateInstitutionDataPackage(
+    institutionId: string,
+    dataPackage: Partial<InstitutionDataPackage>
+  ): Promise<void> {
+    try {
+      const batch = writeBatch(this.firestore);
+
+      // Update institution if provided
+      if (dataPackage.institution) {
+        const instRef = doc(this.firestore, this.INSTITUTIONS_COLLECTION, institutionId);
+        batch.update(instRef, {
+          ...dataPackage.institution,
+          updatedAt: Timestamp.now()
+        });
+      }
+
+      // Note: For subcollections, we need to know the document IDs
+      // This is a simplified version - in production you'd fetch IDs first
+
+      await batch.commit();
+    } catch (error) {
+      console.error('Error updating institution data package:', error);
+      throw error;
+    }
+  }
+
+  // ==================== ADVANCED QUERY METHODS ====================
+
+  /**
+   * Get institutions with advanced filtering and pagination
+   */
+  async getInstitutionsPaginated(
+    filter: InstitutionQueryFilter,
+    pagination: PaginationOptions
+  ): Promise<PaginatedResult<Institution>> {
+    try {
+      const colRef = collection(this.firestore, this.INSTITUTIONS_COLLECTION);
+      const constraints: QueryConstraint[] = [];
+
+      // Add filters
+      if (filter.financialYear) {
+        constraints.push(where('financialYear', '==', filter.financialYear));
+      }
+      if (filter.financialQuarter) {
+        constraints.push(where('financialQuarter', '==', filter.financialQuarter));
+      }
+      if (filter.businessType) {
+        constraints.push(where('businessType', '==', filter.businessType));
+      }
+      if (filter.institutionCodes && filter.institutionCodes.length > 0) {
+        constraints.push(where('institutionCode', 'in', filter.institutionCodes));
+      }
+      if (filter.status) {
+        constraints.push(where('status', '==', filter.status));
+      }
+
+      // Add ordering
+      if (pagination.orderBy) {
+        constraints.push(orderBy(pagination.orderBy, pagination.orderDirection || 'asc'));
+      }
+
+      // Add pagination
+      constraints.push(limit(pagination.limit + 1)); // Get one extra to check if more exist
+
+      // Create query
+      const q = query(colRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+
+      const docs = querySnapshot.docs;
+      const hasMore = docs.length > pagination.limit;
+      const data = docs.slice(0, pagination.limit).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Institution[];
+
+      // Get total count (this is expensive - consider caching or separate count document)
+      const countQuery = query(colRef, ...constraints.filter(c => !(c.type === 'limit')));
+      const countSnapshot = await getDocs(countQuery);
+      const total = countSnapshot.size;
+
+      return {
+        data,
+        total,
+        hasMore,
+        nextOffset: hasMore ? pagination.offset + pagination.limit : undefined
+      };
+    } catch (error) {
+      console.error('Error getting paginated institutions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all institutions matching filter without pagination
+   */
+  async getInstitutionsByFilter(filter: InstitutionQueryFilter): Promise<Institution[]> {
+    try {
+      const colRef = collection(this.firestore, this.INSTITUTIONS_COLLECTION);
+      const constraints: QueryConstraint[] = [];
+
+      if (filter.financialYear) {
+        constraints.push(where('financialYear', '==', filter.financialYear));
+      }
+      if (filter.financialQuarter) {
+        constraints.push(where('financialQuarter', '==', filter.financialQuarter));
+      }
+      if (filter.businessType) {
+        constraints.push(where('businessType', '==', filter.businessType));
+      }
+      if (filter.institutionCodes && filter.institutionCodes.length > 0) {
+        constraints.push(where('institutionCode', 'in', filter.institutionCodes));
+      }
+      if (filter.status) {
+        constraints.push(where('status', '==', filter.status));
+      }
+
+      const q = query(colRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Institution[];
+    } catch (error) {
+      console.error('Error getting institutions by filter:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get aggregated business class performance across all institutions for a period
+   */
+  async getAggregatedBusinessClassPerformance(
+    year: number,
+    quarter: string
+  ): Promise<BusinessClassPerformance[]> {
+    try {
+      const institutions = await this.getInstitutionsForPeriod(year, quarter);
+      const periodId = `${year}_${quarter}`;
+      
+      const allPerformances = await Promise.all(
+        institutions.map(inst => this.getBusinessClassPerformance(inst.id, periodId))
+      );
+      
+      // Flatten the array
+      return allPerformances.flat();
+    } catch (error) {
+      console.error('Error getting aggregated business class performance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get aggregated asset breakdown across all institutions for a period
+   */
+  async getAggregatedAssetBreakdown(year: number, quarter: string): Promise<AssetBreakdown[]> {
+    try {
+      const institutions = await this.getInstitutionsForPeriod(year, quarter);
+      const periodId = `${year}_${quarter}`;
+      
+      const allAssets = await Promise.all(
+        institutions.map(inst => this.getAssetBreakdown(inst.id, periodId))
+      );
+      
+      // Flatten the array
+      return allAssets.flat();
+    } catch (error) {
+      console.error('Error getting aggregated asset breakdown:', error);
+      throw error;
+    }
+  }
+
+  // ==================== UTILITY METHODS ====================
+
+  /**
+   * Check if institution exists
+   */
+  async institutionExists(institutionId: string): Promise<boolean> {
+    try {
+      const institution = await this.getInstitution(institutionId);
+      return institution !== null;
+    } catch (error) {
+      console.error('Error checking institution existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get institution count by filter
+   */
+  async getInstitutionCount(filter: InstitutionQueryFilter): Promise<number> {
+    try {
+      const institutions = await this.getInstitutionsByFilter(filter);
+      return institutions.length;
+    } catch (error) {
+      console.error('Error getting institution count:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available periods (unique year-quarter combinations)
+   */
+  async getAvailablePeriods(): Promise<{ year: number; quarter: string }[]> {
+    try {
+      const institutions = await this.getAllInstitutions();
+      const periodsSet = new Set<string>();
+      
+      institutions.forEach(inst => {
+        periodsSet.add(`${inst.financialYear}_${inst.financialQuarter}`);
+      });
+      
+      return Array.from(periodsSet)
+        .map(period => {
+          const [year, quarter] = period.split('_');
+          return { year: parseInt(year), quarter };
+        })
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.quarter.localeCompare(a.quarter);
+        });
+    } catch (error) {
+      console.error('Error getting available periods:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get unique business types
+   */
+  async getBusinessTypes(): Promise<string[]> {
+    try {
+      const institutions = await this.getAllInstitutions();
+      const typesSet = new Set<string>();
+      
+      institutions.forEach(inst => {
+        if (inst.businessType) {
+          typesSet.add(inst.businessType);
+        }
+      });
+      
+      return Array.from(typesSet).sort();
+    } catch (error) {
+      console.error('Error getting business types:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete institution with all subcollections (complete cleanup)
+   */
+  async deleteInstitutionComplete(institutionId: string): Promise<void> {
+    return this.deleteInstitution(institutionId, true);
+  }
+
+  /**
+   * Bulk delete institutions
+   */
+  async bulkDeleteInstitutions(institutionIds: string[]): Promise<void> {
+    try {
+      await Promise.all(
+        institutionIds.map(id => this.deleteInstitutionComplete(id))
+      );
+    } catch (error) {
+      console.error('Error bulk deleting institutions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get institution data packages for a specific period
+   */
+  async getInstitutionDataPackagesForPeriod(year: number, quarter: string): Promise<InstitutionDataPackage[]> {
+    try {
+      const institutions = await this.getInstitutionsByFilters({ financialYear: year, financialQuarter: quarter });
+      const dataPackages: InstitutionDataPackage[] = [];
+
+      for (const institution of institutions) {
+        try {
+          const periodId = `${year}_${quarter}`;
+          const [incomeStatement, financialPosition, businessClassPerformances, assetBreakdowns] = await Promise.all([
+            this.getIncomeStatement(institution.id, periodId),
+            this.getFinancialPosition(institution.id, periodId),
+            this.getBusinessClassPerformance(institution.id, periodId),
+            this.getAssetBreakdown(institution.id, periodId)
+          ]);
+
+          if (incomeStatement && financialPosition) {
+            dataPackages.push({
+              institution,
+              incomeStatement,
+              financialPosition,
+              businessClassPerformances,
+              assetBreakdowns
+            });
+          }
+        } catch (error) {
+          console.warn(`Error fetching data for institution ${institution.id}:`, error);
+        }
+      }
+
+      return dataPackages;
+    } catch (error) {
+      console.error('Error getting institution data packages for period:', error);
+      throw error;
+    }
+  }
+
+  // ==================== PUMPING REPORTS ====================
+
+  /**
+   * Save a pumping report to Firestore
+   */
+  async saveReport(report: Report): Promise<void> {
+    try {
+      const reportsCollection = collection(this.firestore, 'reports');
+      const reportData = {
+        ...report,
+        reportDate: Timestamp.fromDate(report.reportDate),
+        createdAt: Timestamp.fromDate(report.createdAt),
+        updatedAt: Timestamp.fromDate(report.updatedAt)
+      };
+
+      await addDoc(reportsCollection, reportData);
+      console.log('Report saved successfully:', report.reportId);
+    } catch (error) {
+      console.error('Error saving report:', error);
+      throw error;
+    }
+  }
+}

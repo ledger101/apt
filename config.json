@@ -1,0 +1,36 @@
+{
+  "base_url": "http://localhost:5555",
+  "login_credentials": {
+    "email": "kuziwa@gmail.com",
+    "password": "123456"
+  },
+  "timeouts": {
+    "page_load": 30000,
+    "element_wait": 10000,
+    "action_timeout": 5000
+  },
+  "browser_settings": {
+    "headless": false,
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "record_video": true,
+    "slow_mo": 100
+  },
+  "screenshot_settings": {
+    "capture_on_action": true,
+    "capture_on_error": true,
+    "full_page": true
+  },
+  "output_dirs": {
+    "screenshots": "screenshots",
+    "videos": "videos",
+    "exports": "exports",
+    "logs": "logs"
+  },
+  "retry_settings": {
+    "max_retries": 3,
+    "retry_delay": 1000
+  }
+}

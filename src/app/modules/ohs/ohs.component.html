@@ -1,0 +1,313 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="ohs-container pt-20">
+  <h1>OHS Management System</h1>
+  <p>Digitize safety observations and inspections</p>
+
+  <form (ngSubmit)="submitForm()" class="ohs-form">
+
+    <!-- Administrative Metadata -->
+    <section class="form-section">
+      <h2>Document Information</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Form Title:</label>
+          <input type="text" [(ngModel)]="form.formTitle" name="formTitle" required>
+        </div>
+        <div class="form-group">
+          <label>Reference Number:</label>
+          <input type="text" [(ngModel)]="form.referenceNumber" name="referenceNumber" required>
+        </div>
+        <div class="form-group">
+          <label>Version:</label>
+          <input type="text" [(ngModel)]="form.version" name="version" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date of Issue:</label>
+          <input type="date" [(ngModel)]="form.dateOfIssue" name="dateOfIssue" required>
+        </div>
+        <div class="form-group">
+          <label>Next Review Date:</label>
+          <input type="date" [(ngModel)]="form.nextReviewDate" name="nextReviewDate">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Author:</label>
+          <input type="text" [(ngModel)]="form.author" name="author" required>
+        </div>
+        <div class="form-group">
+          <label>Approver:</label>
+          <input type="text" [(ngModel)]="form.approver" name="approver" required>
+        </div>
+      </div>
+    </section>
+
+    <!-- Personnel Details -->
+    <section class="form-section">
+      <h2>Personnel Details</h2>
+
+      <div class="personnel-section">
+        <h3>Observer/Assessor</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" [(ngModel)]="form.observer.name" name="observerName" required>
+          </div>
+          <div class="form-group">
+            <label>Employee ID:</label>
+            <input type="text" [(ngModel)]="form.observer.employeeId" name="observerId" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Job Title:</label>
+            <input type="text" [(ngModel)]="form.observer.jobTitle" name="observerTitle" required>
+          </div>
+          <div class="form-group">
+            <label>Department:</label>
+            <input type="text" [(ngModel)]="form.observer.department" name="observerDept" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="personnel-section">
+        <h3>Employee/Candidate</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" [(ngModel)]="form.employee.name" name="employeeName" required>
+          </div>
+          <div class="form-group">
+            <label>Employee ID:</label>
+            <input type="text" [(ngModel)]="form.employee.employeeId" name="employeeId" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Job Title:</label>
+            <input type="text" [(ngModel)]="form.employee.jobTitle" name="employeeTitle" required>
+          </div>
+          <div class="form-group">
+            <label>Department:</label>
+            <input type="text" [(ngModel)]="form.employee.department" name="employeeDept" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="personnel-section">
+        <h3>Superintendent</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" [(ngModel)]="form.superintendent.name" name="superintendentName" required>
+          </div>
+          <div class="form-group">
+            <label>Employee ID:</label>
+            <input type="text" [(ngModel)]="form.superintendent.employeeId" name="superintendentId" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Job Title:</label>
+            <input type="text" [(ngModel)]="form.superintendent.jobTitle" name="superintendentTitle" required>
+          </div>
+          <div class="form-group">
+            <label>Department:</label>
+            <input type="text" [(ngModel)]="form.superintendent.department" name="superintendentDept" required>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Operational Context -->
+    <section class="form-section">
+      <h2>Operational Context</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date:</label>
+          <input type="date" [(ngModel)]="form.date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Time:</label>
+          <input type="time" [(ngModel)]="form.time" name="time" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Section:</label>
+          <input type="text" [(ngModel)]="form.section" name="section" required>
+        </div>
+        <div class="form-group">
+          <label>Location:</label>
+          <input type="text" [(ngModel)]="form.location" name="location" required>
+        </div>
+        <div class="form-group">
+          <label>Area:</label>
+          <input type="text" [(ngModel)]="form.area" name="area" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Shift Type:</label>
+          <select [(ngModel)]="form.shiftType" name="shiftType" required>
+            <option value="mining">Mining</option>
+            <option value="others">Others</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Shift:</label>
+          <input type="text" [(ngModel)]="form.shift" name="shift" required [placeholder]="form.shiftType === 'mining' ? 'Morning/Afternoon/Night' : 'Day/Night'">
+        </div>
+        <div class="form-group">
+          <label>Crew:</label>
+          <input type="text" [(ngModel)]="form.crew" name="crew" required [placeholder]="form.shiftType === 'mining' ? 'A-D' : '1-3'">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Reason for Observation:</label>
+          <select [(ngModel)]="form.reason" name="reason" required>
+            <option value="">-- Select Reason --</option>
+            <option *ngFor="let reason of reasons" [value]="reason">{{ reason }}</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Discipline Selection and Checklist -->
+    <section class="form-section">
+      <h2>Safety Discipline</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Select Discipline:</label>
+          <select [(ngModel)]="selectedDiscipline" name="discipline" (change)="loadChecklist()" required>
+            <option value="">-- Select Discipline --</option>
+            <option *ngFor="let disc of disciplines" [value]="disc.value">{{ disc.label }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div *ngIf="form.checklist.length > 0" class="checklist-section">
+        <h3>Checklist</h3>
+        <div *ngFor="let item of form.checklist" class="checklist-item">
+          <div class="question">
+            <span [class.critical]="item.critical">{{ item.question }}</span>
+            <span *ngIf="item.critical" class="critical-badge">CRITICAL</span>
+          </div>
+          <div class="response-section">
+            <div class="binary-response">
+              <label class="response-option">
+                <input type="radio" [(ngModel)]="item.response" [name]="'response-' + item.id" value="yes" required>
+                <span class="checkmark yes">YES</span>
+              </label>
+              <label class="response-option">
+                <input type="radio" [(ngModel)]="item.response" [name]="'response-' + item.id" value="no" required>
+                <span class="checkmark no">NO</span>
+              </label>
+            </div>
+            <div class="comments-section">
+              <label>Comments/Actions:</label>
+              <textarea [(ngModel)]="item.comments" [name]="'comments-' + item.id" placeholder="Enter comments or corrective actions if NO"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Evaluation -->
+    <section class="form-section">
+      <h2>Evaluation</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Competency Outcome:</label>
+          <div class="competency-toggle">
+            <label class="toggle-option">
+              <input type="radio" [(ngModel)]="form.competencyOutcome" name="competency" value="competent" required>
+              <span class="toggle-label competent">Competent (C)</span>
+            </label>
+            <label class="toggle-option">
+              <input type="radio" [(ngModel)]="form.competencyOutcome" name="competency" value="not_yet_competent" required>
+              <span class="toggle-label not-competent">Not Yet Competent (NYC)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="form.forwardToHR" name="forwardToHR">
+            Forward to HR for training scheduling
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Plan -->
+    <section class="form-section">
+      <h2>Action Plan</h2>
+      <button type="button" (click)="addActionItem()" class="add-action-btn">Add Action Item</button>
+      <div class="action-table">
+        <div class="action-header">
+          <div>#</div>
+          <div>Description/Finding</div>
+          <div>Responsible Person</div>
+          <div>Due Date</div>
+          <div>Actions</div>
+        </div>
+        <div *ngFor="let item of form.actionItems; let i = index" class="action-row">
+          <div>{{ item.number }}</div>
+          <div><input type="text" [(ngModel)]="item.description" [name]="'action-desc-' + i" placeholder="Action description"></div>
+          <div><input type="text" [(ngModel)]="item.responsiblePerson" [name]="'action-person-' + i" placeholder="Responsible person"></div>
+          <div><input type="date" [(ngModel)]="item.dueDate" [name]="'action-date-' + i"></div>
+          <div><button type="button" (click)="removeActionItem(i)" class="remove-btn">Remove</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Photo Evidence -->
+    <section class="form-section">
+      <h2>Photo Evidence</h2>
+      <div class="photo-upload">
+        <input type="file" accept="image/*" multiple (change)="onPhotoSelected($event)" style="display: none" #photoInput>
+        <button type="button" (click)="photoInput.click()" class="upload-btn">Upload Photos</button>
+        <div class="photo-preview">
+          <div *ngFor="let photo of form.photoEvidence; let i = index" class="photo-item">
+            <img [src]="photo" alt="Evidence {{ i + 1 }}">
+            <button type="button" (click)="removePhoto(i)" class="remove-photo">×</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Submit -->
+    <div class="form-actions">
+      <button type="submit" class="submit-btn">Submit Form</button>
+    </div>
+  </form>
+</div>

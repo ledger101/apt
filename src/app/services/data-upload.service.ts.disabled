@@ -1,0 +1,306 @@
+import { Injectable } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  doc,
+  setDoc,
+  writeBatch
+} from '@angular/fire/firestore';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { ExcelParsingService } from './excel-parsing.service';
+// TODO: Update for pumping data models
+// import {
+//   Institution,
+//   IncomeStatement,
+//   FinancialPosition,
+//   BusinessClassPerformance,
+//   AssetBreakdown
+// } from '../models/pension-data.model';
+
+export interface ParsedData {
+  institution: Institution;
+  incomeStatement: IncomeStatement;
+  financialPosition: FinancialPosition;
+  businessClassPerformances: BusinessClassPerformance[];
+  assetBreakdowns: AssetBreakdown[];
+}
+
+export interface UploadProgress {
+  stage: 'parsing' | 'validating' | 'saving' | 'complete' | 'error';
+  message: string;
+  percentage: number;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class DataUploadService {
+  private loadingSubject = new BehaviorSubject<boolean>(false);
+  public loading$ = this.loadingSubject.asObservable();
+
+  private progressSubject = new BehaviorSubject<UploadProgress>({
+    stage: 'parsing',
+    message: 'Ready to upload',
+    percentage: 0
+  });
+  public progress$ = this.progressSubject.asObservable();
+
+  constructor(
+    private firestore: Firestore,
+    private excelParsingService: ExcelParsingService
+  ) {}
+
+  /**
+   * Main method to handle Excel file upload:
+   * 1. Parse Excel file using ExcelParsingService
+   * 2. Validate parsed data
+   * 3. Save to Firestore with proper document IDs and subcollections
+   */
+  async uploadExcelFile(file: File): Promise<void> {
+    this.loadingSubject.next(true);
+    this.updateProgress('parsing', 'Parsing Excel file...', 10);
+
+    try {
+      // Parse Excel file
+      const parsedData = await this.parseExcelFile(file);
+      this.updateProgress('parsing', 'Excel file parsed successfully', 30);
+
+      // Validate parsed data
+      this.updateProgress('validating', 'Validating data...', 40);
+      this.validateParsedData(parsedData);
+      this.updateProgress('validating', 'Data validation complete', 50);
+
+      // Save to Firestore
+      this.updateProgress('saving', 'Saving to Firestore...', 60);
+      await this.saveDataToFirestore(parsedData);
+      this.updateProgress('complete', 'Upload complete!', 100);
+
+    } catch (error: any) {
+      console.error('Error during upload:', error);
+      this.updateProgress('error', error.message || 'Upload failed', 0);
+      throw error;
+    } finally {
+      this.loadingSubject.next(false);
+    }
+  }
+
+  /**
+   * Parse Excel file using ExcelParsingService
+   */
+  async parseExcelFile(file: File): Promise<ParsedData> {
+    try {
+      const result = await this.excelParsingService.parseExcelFile(file);
+      if (!result || !result.data) {
+        throw new Error('Excel parsing returned no data');
+      }
+      // Map InstitutionDataPackage to ParsedData
+      const parsedData: ParsedData = {
+        institution: result.data.institution,
+        incomeStatement: result.data.incomeStatement,
+        financialPosition: result.data.financialPosition,
+        businessClassPerformances: result.data.businessClassPerformances,
+        assetBreakdowns: result.data.assetBreakdowns
+      };
+      return parsedData;
+    } catch (error: any) {
+      throw new Error(`Excel parsing failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validate parsed data before saving to Firestore
+   */
+  private validateParsedData(data: ParsedData): void {
+    const errors: string[] = [];
+
+    // Validate institution
+    if (!data.institution) {
+      errors.push('Institution data is missing');
+    } else {
+      if (!data.institution.institutionName) {
+        errors.push('Institution name is required');
+      }
+      if (!data.institution.financialYear) {
+        errors.push('Financial year is required');
+      }
+      if (!data.institution.financialQuarter) {
+        errors.push('Financial quarter is required');
+      }
+    }
+
+    // Validate income statement
+    if (!data.incomeStatement) {
+      errors.push('Income statement data is missing');
+    } else {
+      // Check for at least some data
+      const hasRevenue = (data.incomeStatement.insuranceRevenue || 0) > 0;
+      const hasPremiums = (data.incomeStatement.netWrittenPremium || 0) > 0;
+      if (!hasRevenue && !hasPremiums) {
+        errors.push('Income statement must have either revenue or premiums');
+      }
+    }
+
+    // Validate financial position
+    if (!data.financialPosition) {
+      errors.push('Financial position data is missing');
+    } else {
+      const hasAssets = (data.financialPosition.totalAssets || 0) > 0;
+      if (!hasAssets) {
+        errors.push('Financial position must have total assets');
+      }
+    }
+
+    // Business class performances (optional but should have at least one if provided)
+    if (data.businessClassPerformances && data.businessClassPerformances.length > 0) {
+      const validPerformances = data.businessClassPerformances.filter(p => p.businessClass);
+      if (validPerformances.length === 0) {
+        errors.push('Business class performances must have valid business class names');
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error('Validation failed:\n' + errors.join('\n'));
+    }
+  }
+
+  /**
+   * Save parsed data to Firestore using batch writes for atomicity
+   * Document ID format: {institutionCode}_{year}_{quarter}
+   * Updated to match excel-parsing.service.ts ID generation logic
+   */
+  async saveDataToFirestore(parsedData: ParsedData): Promise<void> {
+    try {
+      // Use the institutionCode from parsed data, or generate from name if not available
+      // This matches the logic in excel-parsing.service.ts
+      const code = parsedData.institution.institutionCode || parsedData.institution.institutionName;
+      const docId = `${code.toUpperCase().replace(/\s+/g, '_')}_${parsedData.institution.financialYear}_${parsedData.institution.financialQuarter}`;
+
+      console.log('DataUploadService: Saving with document ID:', docId);
+      console.log('DataUploadService: Institution code:', parsedData.institution.institutionCode);
+      console.log('DataUploadService: Institution name:', parsedData.institution.institutionName);
+
+      // Prepare institution document with metadata
+      const institutionData = {
+        ...parsedData.institution,
+        id: docId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Use batch for atomic writes
+      const batch = writeBatch(this.firestore);
+
+      // 1. Save institution document
+      const institutionRef = doc(this.firestore, 'institutions', docId);
+      batch.set(institutionRef, institutionData);
+
+      // 2. Save income statement subcollection
+      const incomeRef = doc(this.firestore, `institutions/${docId}/income_statements`, docId);
+      batch.set(incomeRef, {
+        ...parsedData.incomeStatement,
+        timestamp: new Date()
+      });
+
+      // 3. Save financial position subcollection
+      const positionRef = doc(this.firestore, `institutions/${docId}/financial_positions`, docId);
+      batch.set(positionRef, {
+        ...parsedData.financialPosition,
+        timestamp: new Date()
+      });
+
+      // 4. Save business class performances (one document per class)
+      if (parsedData.businessClassPerformances && parsedData.businessClassPerformances.length > 0) {
+        for (const performance of parsedData.businessClassPerformances) {
+          const perfDocId = `${docId}_${performance.businessClass.toLowerCase().replace(/\s+/g, '_')}`;
+          const perfRef = doc(this.firestore, `institutions/${docId}/business_class_performance`, perfDocId);
+          batch.set(perfRef, {
+            ...performance,
+            timestamp: new Date()
+          });
+        }
+      }
+
+      // 5. Save asset breakdowns (one document per asset category)
+      if (parsedData.assetBreakdowns && parsedData.assetBreakdowns.length > 0) {
+        for (const asset of parsedData.assetBreakdowns) {
+          const assetDocId = `${docId}_${asset.assetCategory.toLowerCase().replace(/\s+/g, '_')}`;
+          const assetRef = doc(this.firestore, `institutions/${docId}/asset_breakdown`, assetDocId);
+          batch.set(assetRef, {
+            ...asset,
+            timestamp: new Date()
+          });
+        }
+      }
+
+      // Commit batch
+      await batch.commit();
+      console.log(`Data successfully saved to Firestore with document ID: ${docId}`);
+
+    } catch (error: any) {
+      console.error('Error saving to Firestore:', error);
+      throw new Error(`Firestore save failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate institution code from institution name
+   * Example: "EMRE Insurance" -> "emre"
+   */
+  private generateInstitutionCode(institutionName: string): string {
+    return institutionName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .split('_')
+      .filter(part => part.length > 0)
+      .slice(0, 2) // Take first 2 words
+      .join('_');
+  }
+
+  /**
+   * Update progress for UI feedback
+   */
+  private updateProgress(
+    stage: UploadProgress['stage'],
+    message: string,
+    percentage: number
+  ): void {
+    this.progressSubject.next({ stage, message, percentage });
+  }
+
+  /**
+   * Check if an institution document already exists
+   */
+  async documentExists(institutionName: string, year: number, quarter: string): Promise<boolean> {
+    try {
+      const institutionCode = this.generateInstitutionCode(institutionName);
+      const quarterCode = quarter.toLowerCase().replace(/\s+/g, '');
+      const docId = `${institutionCode}_${year}_${quarterCode}`;
+
+      const docRef = doc(this.firestore, 'institutions', docId);
+      const docSnap = await import('@angular/fire/firestore').then(m => m.getDoc(docRef));
+      
+      return docSnap.exists();
+    } catch (error) {
+      console.error('Error checking document existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get current upload progress
+   */
+  getProgress(): Observable<UploadProgress> {
+    return this.progress$;
+  }
+
+  /**
+   * Reset progress
+   */
+  resetProgress(): void {
+    this.progressSubject.next({
+      stage: 'parsing',
+      message: 'Ready to upload',
+      percentage: 0
+    });
+  }
+}

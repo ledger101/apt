@@ -1,0 +1,33 @@
+/* Status Classes */
+.status-active {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-standby {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.status-maintenance {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-breakdown {
+  @apply bg-red-100 text-red-800;
+}
+
+.status-out-of-service {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Location Classes */
+.location-at-site {
+  @apply bg-green-100 text-green-800;
+}
+
+.location-at-depot {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.location-in-transit {
+  @apply bg-yellow-100 text-yellow-800;
+}

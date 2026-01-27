@@ -1,0 +1,343 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 py-6 pt-24">
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Material Master</h1>
+      <p class="text-gray-600">Manage materials and inventory items</p>
+    </div>
+    <button
+      (click)="showAddForm()"
+      class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+    >
+      Add Material
+    </button>
+  </div>
+
+  <!-- Material Form -->
+  <div *ngIf="showForm" class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">
+      {{ isEditing ? 'Edit Material' : 'Add New Material' }}
+    </h2>
+
+    <form [formGroup]="materialForm" (ngSubmit)="saveMaterial()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Code -->
+      <div>
+        <label for="code" class="block text-sm font-medium text-gray-700 mb-1">
+          Material Code *
+        </label>
+        <input
+          type="text"
+          id="code"
+          formControlName="code"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="e.g., FUEL-001"
+        />
+      </div>
+
+      <!-- Name -->
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+          Material Name *
+        </label>
+        <input
+          type="text"
+          id="name"
+          formControlName="name"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="e.g., Diesel Fuel"
+        />
+      </div>
+
+      <!-- Description -->
+      <div class="md:col-span-2">
+        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+          Description *
+        </label>
+        <textarea
+          id="description"
+          formControlName="description"
+          rows="3"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Detailed description of the material"
+        ></textarea>
+      </div>
+
+      <!-- Category -->
+      <div>
+        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">
+          Category *
+        </label>
+        <select
+          id="category"
+          formControlName="category"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Category</option>
+          <option *ngFor="let category of categories" [value]="category">
+            {{ category }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Subcategory -->
+      <div>
+        <label for="subcategory" class="block text-sm font-medium text-gray-700 mb-1">
+          Subcategory
+        </label>
+        <input
+          type="text"
+          id="subcategory"
+          formControlName="subcategory"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Optional subcategory"
+        />
+      </div>
+
+      <!-- Unit -->
+      <div>
+        <label for="unit" class="block text-sm font-medium text-gray-700 mb-1">
+          Unit *
+        </label>
+        <select
+          id="unit"
+          formControlName="unit"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Unit</option>
+          <option *ngFor="let unit of units" [value]="unit">
+            {{ unit }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Unit Price -->
+      <div>
+        <label for="unitPrice" class="block text-sm font-medium text-gray-700 mb-1">
+          Unit Price *
+        </label>
+        <input
+          type="number"
+          id="unitPrice"
+          formControlName="unitPrice"
+          step="0.01"
+          min="0"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="0.00"
+        />
+      </div>
+
+      <!-- Min Stock Level -->
+      <div>
+        <label for="minStockLevel" class="block text-sm font-medium text-gray-700 mb-1">
+          Min Stock Level *
+        </label>
+        <input
+          type="number"
+          id="minStockLevel"
+          formControlName="minStockLevel"
+          min="0"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="0"
+        />
+      </div>
+
+      <!-- Max Stock Level -->
+      <div>
+        <label for="maxStockLevel" class="block text-sm font-medium text-gray-700 mb-1">
+          Max Stock Level
+        </label>
+        <input
+          type="number"
+          id="maxStockLevel"
+          formControlName="maxStockLevel"
+          min="0"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Optional"
+        />
+      </div>
+
+      <!-- Supplier -->
+      <div>
+        <label for="supplier" class="block text-sm font-medium text-gray-700 mb-1">
+          Supplier
+        </label>
+        <input
+          type="text"
+          id="supplier"
+          formControlName="supplier"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Supplier name"
+        />
+      </div>
+
+      <!-- Part Number -->
+      <div>
+        <label for="partNumber" class="block text-sm font-medium text-gray-700 mb-1">
+          Part Number
+        </label>
+        <input
+          type="text"
+          id="partNumber"
+          formControlName="partNumber"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Supplier part number"
+        />
+      </div>
+
+      <!-- Specifications -->
+      <div class="md:col-span-2">
+        <label for="specifications" class="block text-sm font-medium text-gray-700 mb-1">
+          Specifications
+        </label>
+        <textarea
+          id="specifications"
+          formControlName="specifications"
+          rows="2"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Technical specifications"
+        ></textarea>
+      </div>
+
+      <!-- Active Status -->
+      <div class="md:col-span-2">
+        <label class="flex items-center">
+          <input
+            type="checkbox"
+            formControlName="isActive"
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span class="ml-2 text-sm text-gray-700">Active</span>
+        </label>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="md:col-span-2 flex justify-end space-x-3">
+        <button
+          type="button"
+          (click)="cancelEdit()"
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          [disabled]="materialForm.invalid || isLoading"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span *ngIf="isLoading">Saving...</span>
+          <span *ngIf="!isLoading">{{ isEditing ? 'Update' : 'Create' }} Material</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Materials List -->
+  <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div *ngIf="isLoading" class="text-center py-8">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+      <p class="mt-2 text-gray-600">Loading materials...</p>
+    </div>
+
+    <div *ngIf="!isLoading" class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Code
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Name
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Category
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Unit
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Stock
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Price
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr *ngFor="let material of materials" class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              {{ material.code }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ material.name }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ material.category }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ material.unit }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ material.currentStock || 0 }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ formatCurrency(material.unitPrice) }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ getStockStatus(material).color }}">
+                {{ getStockStatus(material).status }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <button
+                (click)="editMaterial(material)"
+                class="text-blue-600 hover:text-blue-900 mr-3"
+              >
+                Edit
+              </button>
+              <button
+                (click)="deleteMaterial(material)"
+                class="text-red-600 hover:text-red-900"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="materials.length === 0" class="text-center py-8 text-gray-500">
+        No materials found. Click "Add Material" to create your first material.
+      </div>
+    </div>
+  </div>
+</div>

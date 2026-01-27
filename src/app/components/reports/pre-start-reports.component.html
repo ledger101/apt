@@ -1,0 +1,74 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="reports-container pt-20">
+  <h1>Pre-Start Check Reports</h1>
+  <p>View pre-start checks by vehicle</p>
+
+  <div class="filters">
+    <div class="form-group">
+      <label>Select Vehicle:</label>
+      <select [(ngModel)]="selectedVehicleId" (change)="onVehicleChange()">
+        <option value="">Select Vehicle</option>
+        <option *ngFor="let vehicle of vehicles" [value]="vehicle.vehicleId">
+          {{ vehicle.make }} {{ vehicle.model }} - {{ vehicle.licensePlate }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading...</div>
+
+  <div *ngIf="!loading && checks.length > 0" class="checks-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Shift</th>
+          <th>Status</th>
+          <th>Submitted By</th>
+          <th>Odometer</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let check of checks">
+          <td>{{ check.date.toDate() | date:'shortDate' }}</td>
+          <td>{{ check.shift }}</td>
+          <td>{{ check.status }}</td>
+          <td>{{ check.submittedBy }}</td>
+          <td>{{ check.odometerReading }}</td>
+          <td>
+            <button (click)="viewCheck(check)">View Details</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="!loading && checks.length === 0 && selectedVehicleId" class="no-data">
+    No pre-start checks found for this vehicle.
+  </div>
+</div>

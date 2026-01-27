@@ -1,0 +1,123 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+
+        <!-- Back to Fleet -->
+        <button
+          (click)="navigateToFleet()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Fleet
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="pre-start-container pt-20">
+  <h1>Light Vehicle Pre-Start Check</h1>
+  <p>Complete the checklist before operating the vehicle</p>
+
+  <form (ngSubmit)="submitCheck()" class="pre-start-form">
+
+    <!-- Vehicle Selection -->
+    <section class="form-section">
+      <h2>Vehicle Information</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Vehicle:</label>
+          <select [(ngModel)]="check.vehicleId" name="vehicleId" required title="Select a vehicle">
+            <option value="">Select Vehicle</option>
+            <option *ngFor="let vehicle of vehicles" [value]="vehicle.vehicleId">
+              {{ vehicle.make }} {{ vehicle.model }} - {{ vehicle.licensePlate }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date:</label>
+          <input type="text" [value]="check.date.toDate() | date:'yyyy-MM-dd'" readonly placeholder="Auto-filled date">
+        </div>
+        <div class="form-group">
+          <label>Shift:</label>
+          <input type="text" [value]="check.shift" readonly placeholder="Auto-filled shift">
+        </div>
+      </div>
+    </section>
+
+    <!-- Checklist -->
+    <section class="form-section">
+      <h2>Inspection Checklist</h2>
+      <div *ngFor="let item of check.checklistItems; let i = index" class="checklist-item">
+        <div class="question">
+          <span *ngIf="item.critical" class="critical">*</span>{{ item.question }}
+        </div>
+        <div class="response">
+          <label>
+            <input type="radio" [name]="'response-' + i" value="yes" [(ngModel)]="item.response"> Yes
+          </label>
+          <label>
+            <input type="radio" [name]="'response-' + i" value="no" [(ngModel)]="item.response"> No
+          </label>
+        </div>
+        <div class="comments">
+          <textarea [(ngModel)]="item.comments" [name]="'comments-' + i" placeholder="Comments"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Log Data -->
+    <section class="form-section">
+      <h2>Log Data</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Odometer Reading (kms):</label>
+          <input type="number" [(ngModel)]="check.odometerReading" name="odometerReading" required placeholder="Enter odometer reading">
+        </div>
+        <div class="form-group">
+          <label>Any Abnormal Vehicle Functions:</label>
+          <textarea [(ngModel)]="check.abnormalFunctions" name="abnormalFunctions" placeholder="Describe any abnormalities"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Fuel Added:</label>
+          <input type="text" [(ngModel)]="check.fuelAdded" name="fuelAdded" placeholder="Fuel added">
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <section class="form-section">
+      <h2>Authorization</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>General Comments:</label>
+          <textarea [(ngModel)]="check.generalComments" name="generalComments" placeholder="General comments"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Checked by LV Supervisor / Planner:</label>
+          <input type="text" [(ngModel)]="check.checkedBySupervisor" name="checkedBySupervisor" placeholder="Supervisor name">
+        </div>
+        <div class="form-group">
+          <label>Name:</label>
+          <input type="text" [(ngModel)]="check.supervisorName" name="supervisorName" placeholder="Supervisor name">
+        </div>
+        <div class="form-group">
+          <label>Signature:</label>
+          <input type="text" [(ngModel)]="check.signature" name="signature" placeholder="Signature">
+        </div>
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <button type="submit" class="submit-btn">Submit Check</button>
+    </div>
+  </form>
+</div>

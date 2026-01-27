@@ -1,0 +1,148 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 py-6 pt-24">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Fleet Logistics</h1>
+    <p class="text-gray-600">Real-time tracking of asset locations and status</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="state.error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+    <p class="text-red-800">{{ state.error }}</p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="state.isLoading" class="flex justify-center items-center py-12">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <span class="ml-2 text-gray-600">Loading fleet logistics...</span>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!state.isLoading" class="space-y-6">
+    <!-- Fleet Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ state.vehicles.length }}</div>
+        <div class="text-sm text-gray-600">Total Vehicles</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ state.activeVehicles.length }}</div>
+        <div class="text-sm text-gray-600">Active Vehicles</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600">{{ state.rigs.length }}</div>
+        <div class="text-sm text-gray-600">Total Rigs</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-orange-600">{{ state.activeRigs.length }}</div>
+        <div class="text-sm text-gray-600">Active Rigs</div>
+      </div>
+    </div>
+
+    <!-- Vehicles Section -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Vehicle Locations</h2>
+      <div *ngIf="state.vehicles.length === 0" class="text-gray-500 text-center py-8">
+        No vehicles registered
+      </div>
+      <div *ngIf="state.vehicles.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div *ngFor="let vehicle of state.vehicles"
+             class="border rounded-lg p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium text-gray-900">{{ vehicle.make }} {{ vehicle.model }}</h3>
+            <span class="px-2 py-1 text-xs rounded-full {{ getStatusClass(vehicle.status) }}">
+              {{ vehicle.status }}
+            </span>
+          </div>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p>License: {{ vehicle.licensePlate }}</p>
+            <p>Mileage: {{ vehicle.mileage | number }} km</p>
+            <div class="flex justify-between items-center">
+              <span>Location: {{ vehicle.location }}</span>
+              <span class="px-2 py-1 text-xs rounded-full {{ getLocationClass(vehicle.location) }}">
+                {{ getLocationStatus(vehicle.location) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rigs Section -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Rig Locations</h2>
+      <div *ngIf="state.rigs.length === 0" class="text-gray-500 text-center py-8">
+        No rigs registered
+      </div>
+      <div *ngIf="state.rigs.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div *ngFor="let rig of state.rigs"
+             class="border rounded-lg p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium text-gray-900">{{ rig.name }}</h3>
+            <span class="px-2 py-1 text-xs rounded-full {{ getStatusClass(rig.status) }}">
+              {{ rig.status }}
+            </span>
+          </div>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p>Type: {{ rig.type }}</p>
+            <p>Engine Hours: {{ rig.engineHours | number }} h</p>
+            <div class="flex justify-between items-center">
+              <span>Location: {{ rig.location }}</span>
+              <span class="px-2 py-1 text-xs rounded-full {{ getLocationClass(rig.location) }}">
+                {{ getLocationStatus(rig.location) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Summary -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Location Summary</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="text-center p-4 border rounded-lg">
+          <div class="text-xl font-bold text-green-600">
+            {{ assetsAtSite }}
+          </div>
+          <div class="text-sm text-gray-600">Assets at Sites</div>
+        </div>
+        <div class="text-center p-4 border rounded-lg">
+          <div class="text-xl font-bold text-blue-600">
+            {{ assetsAtDepot }}
+          </div>
+          <div class="text-sm text-gray-600">Assets at Depot</div>
+        </div>
+        <div class="text-center p-4 border rounded-lg">
+          <div class="text-xl font-bold text-yellow-600">
+            {{ assetsInTransit }}
+          </div>
+          <div class="text-sm text-gray-600">Assets in Transit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

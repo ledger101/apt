@@ -1,0 +1,58 @@
+// Upload Component Styles
+
+// File drop zone transitions
+.border-dashed {
+  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+// Progress bar animation
+.transition-all {
+  transition: width 0.3s ease-in-out;
+}
+
+// Custom scrollbar for validation results (if needed)
+.validation-list {
+  max-height: 300px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+
+    &:hover {
+      background: #555;
+    }
+  }
+}
+
+// Hover effects for buttons
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+// File input hover effect
+input[type="file"] {
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "reports": [
+    {
+      "reportId": "2026-01-14KAMISENGORIG1",
+      "reportDate": "2026-01-14",
+      "client": "LMC",
+      "projectSiteArea": "KAMISENGO",
+      "rigNumber": "1",
+      "controlBHId": "KMDWO9",
+      "obsBH1Id": "KMM01",
+      "obsBH2Id": null,
+      "obsBH3Id": null,
+      "challenges": ["HNM"],
+      "supervisorName": "DALITSO SAKALA",
+      "clientRepName": "SUNGENI TEMBO / CEPHAS NGAZIMBI",
+      "status": "Submitted",
+      "dayShift": {
+        "startTime": "06:00",
+        "endTime": "18:00",
+        "activities": [
+          {
+            "order": 1,
+            "activity": "ARRIVAL ON SITE",
+            "from": "06:00",
+            "to": "06:50",
+            "total": "0:50",
+            "chargeable": false
+          },
+          {
+            "order": 2,
+            "activity": "TOOLBOX TALK",
+            "from": "06:50",
+            "to": "07:20",
+            "total": "0:30",
+            "chargeable": false
+          },
+          {
+            "order": 3,
+            "activity": "CONSTANT DISCHARGE TEST PUMPING",
+            "from": "07:30",
+            "to": "10:30",
+            "total": "3:00",
+            "chargeable": true
+          }
+        ],
+        "personnel": [
+          { "name": "DESMOND CHISENGA", "hoursWorked": 12 },
+          { "name": "FRIDAH KANYENZE", "hoursWorked": 12 }
+        ]
+      },
+      "nightShift": {
+        "startTime": "18:00",
+        "endTime": "06:00",
+        "activities": [
+          {
+            "order": 1,
+            "activity": "CONSTANT DISCHARGE TEST PUMPING",
+            "from": "00:00",
+            "to": "06:00",
+            "total": "6:00",
+            "chargeable": true
+          }
+        ],
+        "personnel": [
+          { "name": "LACKSON KANGWANDA", "hoursWorked": 12 },
+          { "name": "GILBERT KASHITO", "hoursWorked": 12 }
+        ]
+      },
+      "fileRef": "gs://bucket/uploads/2026/01/report.xlsx"
+    }
+  ]
+}

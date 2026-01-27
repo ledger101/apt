@@ -1,0 +1,255 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Dashboard -->
+        <button
+          (click)="navigateToDashboard()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container mx-auto px-4 py-6 pt-24">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-2">Asset Register</h1>
+    <p class="text-gray-600">Register and manage vehicles and rigs in your fleet</p>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="mb-6">
+    <nav class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+      <button
+        (click)="setActiveTab('vehicles')"
+        [class.active]="state.activeTab === 'vehicles'"
+        class="tab-button">
+        Vehicles
+      </button>
+      <button
+        (click)="setActiveTab('rigs')"
+        [class.active]="state.activeTab === 'rigs'"
+        class="tab-button">
+        Rigs
+      </button>
+    </nav>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="state.error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+    <p class="text-red-800">{{ state.error }}</p>
+  </div>
+  <div *ngIf="state.success" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+    <p class="text-green-800">{{ state.success }}</p>
+  </div>
+
+  <!-- Vehicles Tab -->
+  <div *ngIf="state.activeTab === 'vehicles'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Vehicle Registration Form -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Register New Vehicle</h2>
+      <form [formGroup]="state.vehicleForm" (ngSubmit)="onVehicleSubmit()" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Make *</label>
+            <input
+              type="text"
+              formControlName="make"
+              class="form-input"
+              placeholder="e.g., Toyota">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Model *</label>
+            <input
+              type="text"
+              formControlName="model"
+              class="form-input"
+              placeholder="e.g., Hilux">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+            <input
+              type="number"
+              formControlName="year"
+              class="form-input"
+              [min]="1900"
+              [max]="maxYear">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">License Plate *</label>
+            <input
+              type="text"
+              formControlName="licensePlate"
+              class="form-input"
+              placeholder="ABC-123">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Current Mileage *</label>
+            <input
+              type="number"
+              formControlName="mileage"
+              class="form-input"
+              min="0">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Service Interval (km) *</label>
+            <input
+              type="number"
+              formControlName="serviceInterval"
+              class="form-input"
+              min="1000">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+          <input
+            type="text"
+            formControlName="location"
+            class="form-input"
+            placeholder="e.g., Site A, Johannesburg">
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="state.vehicleForm.invalid || state.isLoading"
+          class="btn-primary w-full">
+          <span *ngIf="state.isLoading">Registering...</span>
+          <span *ngIf="!state.isLoading">Register Vehicle</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Vehicles List -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Registered Vehicles</h2>
+      <div *ngIf="state.vehicles.length === 0" class="text-gray-500 text-center py-8">
+        No vehicles registered yet
+      </div>
+      <div *ngIf="state.vehicles.length > 0" class="space-y-3">
+        <div *ngFor="let vehicle of state.vehicles" class="border rounded-lg p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium">{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.year }})</h3>
+            <span class="px-2 py-1 text-xs rounded-full {{ getStatusClass(vehicle.status) }}">
+              {{ vehicle.status }}
+            </span>
+          </div>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p>License: {{ vehicle.licensePlate }}</p>
+            <p>Mileage: {{ vehicle.mileage | number }} km</p>
+            <p>Location: {{ vehicle.location }}</p>
+            <p>Next Service: {{ vehicle.nextServiceMileage | number }} km</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rigs Tab -->
+  <div *ngIf="state.activeTab === 'rigs'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Rig Registration Form -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Register New Rig</h2>
+      <form [formGroup]="state.rigForm" (ngSubmit)="onRigSubmit()" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Rig Name *</label>
+          <input
+            type="text"
+            formControlName="name"
+            class="form-input"
+            placeholder="e.g., Rig-001">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+            <select formControlName="type" class="form-input">
+              <option value="">Select Type</option>
+              <option value="Drilling">Drilling</option>
+              <option value="Pumping">Pumping</option>
+              <option value="Geotechnical">Geotechnical</option>
+              <option value="Exploration">Exploration</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Engine Hours *</label>
+            <input
+              type="number"
+              formControlName="engineHours"
+              class="form-input"
+              min="0">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Service Interval (hours) *</label>
+            <input
+              type="number"
+              formControlName="serviceInterval"
+              class="form-input"
+              min="500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+            <input
+              type="text"
+              formControlName="location"
+              class="form-input"
+              placeholder="e.g., Site B, Pretoria">
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="state.rigForm.invalid || state.isLoading"
+          class="btn-primary w-full">
+          <span *ngIf="state.isLoading">Registering...</span>
+          <span *ngIf="!state.isLoading">Register Rig</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Rigs List -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-semibold mb-4">Registered Rigs</h2>
+      <div *ngIf="state.rigs.length === 0" class="text-gray-500 text-center py-8">
+        No rigs registered yet
+      </div>
+      <div *ngIf="state.rigs.length > 0" class="space-y-3">
+        <div *ngFor="let rig of state.rigs" class="border rounded-lg p-4">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium">{{ rig.name }}</h3>
+            <span class="px-2 py-1 text-xs rounded-full {{ getStatusClass(rig.status) }}">
+              {{ rig.status }}
+            </span>
+          </div>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p>Type: {{ rig.type }}</p>
+            <p>Engine Hours: {{ rig.engineHours | number }} h</p>
+            <p>Location: {{ rig.location }}</p>
+            <p>Next Service: {{ rig.nextServiceHours | number }} h</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
