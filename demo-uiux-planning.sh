@@ -21,6 +21,12 @@ echo "Step 2: Generating design system recommendations..."
 echo "  → Running: UI/UX Pro Max skill"
 echo ""
 
+# Check if the skill exists
+if [ ! -f ".agent/skills/ui-ux-pro-max/scripts/search.py" ]; then
+  echo "❌ Error: UI/UX Pro Max skill not found at .agent/skills/ui-ux-pro-max/"
+  exit 1
+fi
+
 python3 .agent/skills/ui-ux-pro-max/scripts/search.py \
   "enterprise ERP dashboard professional accessible multi-domain" \
   --design-system \

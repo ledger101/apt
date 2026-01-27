@@ -121,7 +121,7 @@ Generate a comprehensive improvement plan document that includes:
 
 ### Phase 4: Quality Checklist
 
-Ensure the plan includes verification criteria based on Professional UI Quality Rules:
+Ensure the plan includes verification criteria based on Professional UI Quality Rules (defined in SKILLS.md):
 
 - [ ] Visual elements use SVG icons, not emojis
 - [ ] Hover states defined without layout shifts

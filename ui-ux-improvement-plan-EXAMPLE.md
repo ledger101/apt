@@ -108,9 +108,14 @@ $dark-text: #F1F5F9;        // Slate 100
 **Mood**: Medical, clean, accessible, professional, trustworthy  
 **Best For**: Enterprise, healthcare, professional services  
 
+```html
+<!-- Import from Google Fonts in index.html for better performance -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+```
+
 ```scss
-// Import from Google Fonts
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&display=swap');
 
 // Typography Scale
 $font-family-heading: 'Figtree', sans-serif;
@@ -573,7 +578,7 @@ $font-bold: 700;
 **Implementation**:
 ```html
 <div class="empty-state">
-  <svg class="empty-icon"><!-- Heroicon --></svg>
+  <svg class="empty-icon" aria-hidden="true"><!-- Heroicon --></svg>
   <h3>No invoices yet</h3>
   <p>Get started by creating your first invoice</p>
   <button class="btn btn-primary">Create Invoice</button>
