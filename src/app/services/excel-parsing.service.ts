@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as XLSX from 'xlsx';
 import { Timestamp } from '@angular/fire/firestore';
-import { Report, Shift, Activity, Personnel, ValidationResult, AquiferTest, AquiferDataPoint, Borehole, DischargePoint, Series, Quality, DischargeTest, ParseJob } from '../models';
+import { Report, Shift, Activity, Personnel, ValidationResult, AquiferTest, AquiferDataPoint, Site, Borehole, DischargePoint, Series, Quality, DischargeTest, ParseJob } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -187,6 +187,7 @@ export class ExcelParsingService {
   async parseFile(file: File): Promise<{
     type: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
     data: Report | DischargeTest | null;
+    site: Site | null;
     borehole: Borehole | null;
     series: Series[];
     quality: Quality[];
@@ -207,6 +208,7 @@ export class ExcelParsingService {
             resolve({
               type,
               data: result.data,
+              site: null,
               borehole: null,
               series: [],
               quality: [],
@@ -217,6 +219,7 @@ export class ExcelParsingService {
             resolve({
               type,
               data: result.data,
+              site: result.site,
               borehole: result.borehole,
               series: result.series,
               quality: result.quality,
@@ -228,6 +231,7 @@ export class ExcelParsingService {
             resolve({
               type: 'unknown',
               data: null,
+              site: null,
               borehole: null,
               series: [],
               quality: [],
@@ -257,10 +261,11 @@ export class ExcelParsingService {
    * Parse an Excel/CSV file for aquifer test data
    * @deprecated Use parseFile instead
    */
-  async parseAquiferFile(file: File): Promise<{ data: DischargeTest | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult }> {
+  async parseAquiferFile(file: File): Promise<{ data: DischargeTest | null; site: Site | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult }> {
     const result = await this.parseFile(file);
     return {
       data: result.data as DischargeTest,
+      site: result.site,
       borehole: result.borehole,
       series: result.series,
       quality: result.quality,
@@ -343,7 +348,7 @@ export class ExcelParsingService {
     return { data: report, validation };
   }
 
-  private extractDischargeData(workbook: XLSX.WorkBook, filename?: string): { data: DischargeTest | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult } {
+  private extractDischargeData(workbook: XLSX.WorkBook, filename?: string): { data: DischargeTest | null; site: Site | null; borehole: Borehole | null; series: Series[]; quality: Quality[]; validation: ValidationResult } {
     const validation: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
     // Detect template type and find the correct sheet
@@ -385,7 +390,7 @@ export class ExcelParsingService {
     if (type === 'unknown' || !sheet) {
       validation.isValid = false;
       validation.errors.push('Template not recognized in any sheet');
-      return { data: null, borehole: null, series: [], quality: [], validation };
+      return { data: null, site: null, borehole: null, series: [], quality: [], validation };
     }
 
     let result: any;
@@ -400,32 +405,48 @@ export class ExcelParsingService {
     if (!result.ok) {
       validation.isValid = false;
       validation.errors.push(result.error);
-      return { data: null, borehole: null, series: [], quality: [], validation };
+      return { data: null, site: null, borehole: null, series: [], quality: [], validation };
     }
 
     // Normalize and validate
     const normalized = this.normalizeCommon(result.data, validation);
 
-    // Create models
+    // Create Site model (extracted from metadata)
+    const siteId = this.slugify(normalized.meta.siteName || 'unknown-site');
+    const site: Site = {
+      siteId,
+      siteName: normalized.meta.siteName || '',
+      coordinates: (normalized.meta.latitude && normalized.meta.longitude) 
+        ? { lat: normalized.meta.latitude, lon: normalized.meta.longitude } 
+        : undefined,
+      client: normalized.meta.client ?? undefined,
+      contractor: normalized.meta.contractor ?? undefined,
+      province: normalized.meta.province ?? undefined,
+      district: normalized.meta.district ?? undefined,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
+
+    // Create Borehole model (without site-level fields)
     const borehole: Borehole = {
-      boreholeId: this.slugify(normalized.meta.boreholeNo || normalized.meta.siteName || 'unknown'),
+      boreholeId: this.slugify(normalized.meta.boreholeNo || 'unknown'),
       boreholeNo: normalized.meta.boreholeNo || '',
       siteName: normalized.meta.siteName || '',
-      ...(normalized.meta.latitude && normalized.meta.longitude ? { coordinates: { lat: normalized.meta.latitude, lon: normalized.meta.longitude } } : {}),
-      client: normalized.meta.client ?? null,
-      contractor: normalized.meta.contractor ?? null,
-      province: normalized.meta.province ?? null,
-      district: normalized.meta.district ?? null,
-      elevation_m: normalized.meta.elevationm ?? null,
-      boreholeDepth_m: normalized.meta.boreholeDepthm ?? null,
-      datumAboveCasing_m: normalized.meta.datumAboveCasingm ?? null,
-      existingPump: normalized.meta.existingPump ?? null,
-      staticWL_mbdl: normalized.meta.staticWLmbdl ?? null,
-      casingHeight_magl: normalized.meta.casingHeightmagl ?? null,
-      pumpDepth_m: normalized.meta.pumpDepthm ?? null,
-      pumpInletDiam_mm: normalized.meta.pumpInletDiammm ?? null,
-      pumpType: normalized.meta.pumpType ?? null,
-      swl_mbch: normalized.meta.swlmbch ?? null,
+      coordinates: normalized.meta.latitude && normalized.meta.longitude ? { lat: normalized.meta.latitude, lon: normalized.meta.longitude } : undefined,
+      client: normalized.meta.client,
+      contractor: normalized.meta.contractor,
+      province: normalized.meta.province,
+      district: normalized.meta.district,
+      elevation_m: normalized.meta.elevationm,
+      boreholeDepth_m: normalized.meta.boreholeDepthm,
+      datumAboveCasing_m: normalized.meta.datumAboveCasingm,
+      existingPump: normalized.meta.existingPump,
+      staticWL_mbdl: normalized.meta.staticWLmbdl,
+      casingHeight_magl: normalized.meta.casingHeightmagl,
+      pumpDepth_m: normalized.meta.pumpDepthm,
+      pumpInletDiam_mm: normalized.meta.pumpInletDiammm,
+      pumpType: normalized.meta.pumpType,
+      swl_mbch: normalized.meta.swlmbch,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
@@ -434,18 +455,18 @@ export class ExcelParsingService {
       testId: `discharge-${Date.now()}`,
       testType: normalized.testType,
       boreholeRef: `boreholes/${borehole.boreholeId}`,
-      ...(normalized.startISO ? { startTime: new Date(normalized.startISO) } : {}),
-      ...(normalized.meta.endISO ? { endTime: new Date(normalized.meta.endISO) } : {}),
+      startTime: normalized.startISO ? new Date(normalized.startISO) : undefined,
+      endTime: normalized.meta.endISO ? new Date(normalized.meta.endISO) : undefined,
       summary: {
-        availableDrawdown_m: normalized.meta.availableDrawdownm ?? null,
-        totalTimePumped_min: normalized.meta.totalTimePumpedmin ?? null,
-        staticWL_m: (normalized.meta.staticWLm || normalized.meta.staticWLmbdl) ?? null,
+        availableDrawdown_m: normalized.meta.availableDrawdownm,
+        totalTimePumped_min: normalized.meta.totalTimePumpedmin,
+        staticWL_m: normalized.meta.staticWLm || normalized.meta.staticWLmbdl,
         pump: {
-          depth_m: normalized.meta.pumpDepthm ?? null,
-          inletDiam_mm: normalized.meta.pumpInletDiammm ?? null,
-          type: normalized.meta.pumpType ?? null
+          depth_m: normalized.meta.pumpDepthm,
+          inletDiam_mm: normalized.meta.pumpInletDiammm,
+          type: normalized.meta.pumpType
         },
-        notes: normalized.meta.notes ?? null
+        notes: normalized.meta.notes
       },
       sourceFilePath: '', // to be set later
       status: 'draft',
@@ -481,16 +502,10 @@ export class ExcelParsingService {
       createdAt: new Date()
     }));
 
-    return { data: test, borehole, series, quality, validation };
+    return { data: test, site, borehole, series, quality, validation };
   }
 
-  /**
-   * Helper method to get cell value by cell reference (e.g., 'C5')
-   */
-  private getCellByRef(sheet: XLSX.WorkSheet, cellRef: string): any {
-    const cell = sheet[cellRef];
-    return cell ? (cell.v ?? cell.w ?? null) : null;
-  }
+
 
   /**
    * Helper method to extract data from a range using cell references
@@ -521,6 +536,18 @@ export class ExcelParsingService {
     
     return data;
   }
+
+ 
+
+  /**
+   * Helper method to get cell value by cell reference (e.g., 'C5')
+   */
+  private getCellByRef(sheet: XLSX.WorkSheet, cellRef: string): any {
+    const cell = sheet[cellRef];
+    return cell ? (cell.v ?? cell.w ?? null) : null;
+  }
+
+ 
 
   /**
    * Convert row-based data to DischargePoint format

@@ -13,7 +13,7 @@ import {
   where,
   orderBy
 } from '@angular/fire/firestore';
-import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Borehole, DischargeTest, Series, Quality, ParseJob } from '../models/pumping-data.model';
+import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob } from '../models/pumping-data.model';
 
 @Injectable({
   providedIn: 'root'
@@ -124,21 +124,53 @@ export class FirestoreService {
     }
   }
 
-  // ==================== DISCHARGE REPORTS ====================
+  // ==================== DISCHARGE REPORTS (Site-Based Structure) ====================
 
   /**
-   * Save a borehole to Firestore
+   * Save a site to Firestore
    */
-  async saveBorehole(borehole: Borehole): Promise<void> {
+  async saveSite(site: Site): Promise<void> {
     try {
       const boreholesCollection = collection(this.firestore, 'boreholes');
+      const sitesCollection = collection(this.firestore, 'sites');
+      const siteData = this.cleanForFirestore({
+        ...site,
+        createdAt: site.createdAt,
+        updatedAt: site.updatedAt
+      });
+      
+      // Use siteId as document ID for easier querying
+      const siteDocRef = doc(this.firestore, 'sites', site.siteId);
+      const siteDoc = await getDoc(siteDocRef);
+      
+      if (siteDoc.exists()) {
+        // Update existing site
+        await updateDoc(siteDocRef, { ...siteData, updatedAt: Timestamp.now() });
+        console.log('Site updated successfully:', site.siteId);
+      } else {
+        // Create new site
+        await addDoc(sitesCollection, siteData);
+        console.log('Site created successfully:', site.siteId);
+      }
+    } catch (error) {
+      console.error('Error saving site:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save a borehole under a site (nested structure)
+   */
+  async saveBorehole(siteId: string, borehole: Borehole): Promise<void> {
+    try {
+      const boreholesCollection = collection(this.firestore, `sites/${siteId}/boreholes`);
       const boreholeData = this.cleanForFirestore({
         ...borehole,
         createdAt: borehole.createdAt,
         updatedAt: borehole.updatedAt
       });
       await addDoc(boreholesCollection, boreholeData);
-      console.log('Borehole saved successfully:', borehole.boreholeId);
+      console.log('Borehole saved successfully under site:', siteId, borehole.boreholeId);
     } catch (error) {
       console.error('Error saving borehole:', error);
       throw error;
@@ -163,12 +195,14 @@ export class FirestoreService {
     return cleaned;
   }
 
+ 
+
   /**
-   * Save a discharge test to Firestore
+   * Save a discharge test under a borehole (nested structure)
    */
-  async saveDischargeTest(test: DischargeTest): Promise<void> {
+  async saveDischargeTest(siteId: string, boreholeId: string, test: DischargeTest): Promise<void> {
     try {
-      const testsCollection = collection(this.firestore, 'tests');
+      const testsCollection = collection(this.firestore, `sites/${siteId}/boreholes/${boreholeId}/tests`);
       const testData = this.cleanForFirestore({
         ...test,
         startTime: test.startTime ? Timestamp.fromDate(test.startTime) : null,
@@ -177,7 +211,7 @@ export class FirestoreService {
         updatedAt: test.updatedAt
       });
       await addDoc(testsCollection, testData);
-      console.log('Discharge test saved successfully:', test.testId);
+      console.log('Discharge test saved successfully for borehole:', boreholeId);
     } catch (error) {
       console.error('Error saving discharge test:', error);
       throw error;
@@ -185,13 +219,16 @@ export class FirestoreService {
   }
 
   /**
-   * Get all discharge tests from Firestore
+   * Get all discharge tests from Firestore (using collection group query)
    */
   async getDischargeTests(): Promise<DischargeTest[]> {
     try {
-      const testsCollection = collection(this.firestore, 'tests');
-      const q = query(testsCollection, orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
+      // Use collectionGroup to query all tests across all sites and boreholes
+      const testsQuery = query(
+        collection(this.firestore, 'tests'),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(testsQuery);
 
       const tests: DischargeTest[] = [];
       querySnapshot.forEach((doc) => {
@@ -215,12 +252,76 @@ export class FirestoreService {
   }
 
   /**
-   * Save series data for a test
+   * Get all tests for a specific site
    */
-  async saveSeries(testId: string, series: Series[]): Promise<void> {
+  async getTestsBySite(siteId: string): Promise<DischargeTest[]> {
+    try {
+      const tests: DischargeTest[] = [];
+      
+      // Get all boreholes for this site
+      const boreholesCollection = collection(this.firestore, `sites/${siteId}/boreholes`);
+      const boreholesSnapshot = await getDocs(boreholesCollection);
+      
+      // For each borehole, get its tests
+      for (const boreholeDoc of boreholesSnapshot.docs) {
+        const testsCollection = collection(this.firestore, `sites/${siteId}/boreholes/${boreholeDoc.id}/tests`);
+        const testsSnapshot = await getDocs(query(testsCollection, orderBy('createdAt', 'desc')));
+        
+        testsSnapshot.forEach((testDoc) => {
+          const data = testDoc.data();
+          tests.push({
+            ...data,
+            testId: testDoc.id,
+            startTime: data['startTime']?.toDate ? data['startTime'].toDate() : (data['startTime'] || null),
+            endTime: data['endTime']?.toDate ? data['endTime'].toDate() : (data['endTime'] || null),
+            createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : (data['createdAt'] || new Date()),
+            updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : (data['updatedAt'] || new Date())
+          } as any);
+        });
+      }
+      
+      console.log(`Retrieved ${tests.length} tests for site:`, siteId);
+      return tests;
+    } catch (error) {
+      console.error('Error getting tests by site:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all boreholes for a specific site
+   */
+  async getBoreholesBySite(siteId: string): Promise<Borehole[]> {
+    try {
+      const boreholesCollection = collection(this.firestore, `sites/${siteId}/boreholes`);
+      const querySnapshot = await getDocs(boreholesCollection);
+      
+      const boreholes: Borehole[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        boreholes.push({
+          ...data,
+          boreholeId: doc.id,
+          createdAt: data['createdAt'],
+          updatedAt: data['updatedAt']
+        } as Borehole);
+      });
+      
+      console.log(`Retrieved ${boreholes.length} boreholes for site:`, siteId);
+      return boreholes;
+    } catch (error) {
+      console.error('Error getting boreholes by site:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save series data for a test (nested under test)
+   */
+  async saveSeries(siteId: string, boreholeId: string, testId: string, series: Series[]): Promise<void> {
     try {
       for (const s of series) {
-        const seriesCollection = collection(this.firestore, `tests/${testId}/series`);
+        const seriesCollection = collection(this.firestore, `sites/${siteId}/boreholes/${boreholeId}/tests/${testId}/series`);
         const seriesData = this.cleanForFirestore({
           ...s,
           createdAt: s.createdAt
@@ -235,12 +336,12 @@ export class FirestoreService {
   }
 
   /**
-   * Save quality data for a test
+   * Save quality data for a test (nested under test)
    */
-  async saveQuality(testId: string, quality: Quality[]): Promise<void> {
+  async saveQuality(siteId: string, boreholeId: string, testId: string, quality: Quality[]): Promise<void> {
     try {
       for (const q of quality) {
-        const qualityCollection = collection(this.firestore, `tests/${testId}/quality`);
+        const qualityCollection = collection(this.firestore, `sites/${siteId}/boreholes/${boreholeId}/tests/${testId}/quality`);
         const qualityData = this.cleanForFirestore({
           ...q,
           createdAt: q.createdAt

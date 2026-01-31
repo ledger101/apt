@@ -10,7 +10,7 @@ import { Subject, takeUntil } from 'rxjs';
 // import { DataUploadService, UploadProgress } from '../../services/data-upload.service';
 import { ExcelParsingService } from '../../services/excel-parsing.service';
 import { FirestoreService } from '../../services/firestore.service';
-import { Report, ValidationResult, AquiferTest, DischargeTest, Borehole, Series, Quality } from '../../models';
+import { Report, ValidationResult, AquiferTest, DischargeTest, Site, Borehole, Series, Quality } from '../../models';
 import { BaseChartDirective } from 'ng2-charts';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { ChartConfiguration, ChartType } from 'chart.js';
@@ -23,6 +23,7 @@ interface UploadState {
   validationResults: ValidationResult | null;
   parsedData: Report | AquiferTest | DischargeTest | null;
   detectedType: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
+  site: Site | null;
   borehole: Borehole | null;
   series: Series[];
   quality: Quality[];
@@ -55,6 +56,7 @@ export class UploadComponent implements OnDestroy {
     validationResults: null,
     parsedData: null,
     detectedType: 'unknown',
+    site: null,
     borehole: null,
     series: [],
     quality: [],
@@ -213,6 +215,7 @@ export class UploadComponent implements OnDestroy {
       this.state.validationResults = result.validation;
       this.state.parsedData = result.data;
       this.state.detectedType = result.type;
+      this.state.site = result.site;
       this.state.borehole = result.borehole;
       this.state.series = result.series || [];
       this.state.quality = result.quality || [];
@@ -283,33 +286,61 @@ export class UploadComponent implements OnDestroy {
         // It's an AquiferTest
         await this.firestoreService.saveAquiferTest(this.state.parsedData as AquiferTest);
       } else if (this.isDischargeTest(this.state.parsedData)) {
-        // It's a DischargeTest
+        // It's a DischargeTest - save with site-based structure
         const test = this.state.parsedData as DischargeTest;
         const sourcePath = `uploads/${this.state.selectedFile?.name || 'unknown'}`;
         test.sourceFilePath = sourcePath;
 
-        if (this.state.borehole) {
-          await this.firestoreService.saveBorehole(this.state.borehole);
+        // Save site first
+        if (this.state.site) {
+          await this.firestoreService.saveSite(this.state.site);
         }
-        await this.firestoreService.saveDischargeTest(test);
-        await this.firestoreService.saveSeries(test.testId, this.state.series);
-        await this.firestoreService.saveQuality(test.testId, this.state.quality);
 
-        // Save parse job
-        const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
-        await this.firestoreService.saveParseJob({
-          jobId: `job-${Date.now()}`,
-          testRef: `tests/${test.testId}`,
-          status: 'parsed',
-          warnings: this.state.validationResults?.warnings || [],
-          counts: {
-            series: this.state.series.length,
-            points: totalPoints
-          },
-          sourceFilePath: sourcePath,
-          createdBy: 'user-id', // TODO: Get from Auth
-          createdAt: Timestamp.now()
-        });
+        // Save borehole under site
+        if (this.state.site && this.state.borehole) {
+          await this.firestoreService.saveBorehole(this.state.site.siteId, this.state.borehole);
+        }
+
+        // Save test under borehole
+        if (this.state.site && this.state.borehole) {
+          await this.firestoreService.saveDischargeTest(
+            this.state.site.siteId,
+            this.state.borehole.boreholeId,
+            test
+          );
+
+          // Save series under test
+          await this.firestoreService.saveSeries(
+            this.state.site.siteId,
+            this.state.borehole.boreholeId,
+            test.testId,
+            this.state.series
+          );
+
+          // Save quality under test
+          await this.firestoreService.saveQuality(
+            this.state.site.siteId,
+            this.state.borehole.boreholeId,
+            test.testId,
+            this.state.quality
+          );
+
+          // Save parse job with nested path reference
+          const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
+          await this.firestoreService.saveParseJob({
+            jobId: `job-${Date.now()}`,
+            testRef: `sites/${this.state.site.siteId}/boreholes/${this.state.borehole.boreholeId}/tests/${test.testId}`,
+            status: 'parsed',
+            warnings: this.state.validationResults?.warnings || [],
+            counts: {
+              series: this.state.series.length,
+              points: totalPoints
+            },
+            sourceFilePath: sourcePath,
+            createdBy: 'user-id', // TODO: Get from Auth
+            createdAt: Timestamp.now()
+          });
+        }
       }
 
 
@@ -363,6 +394,7 @@ export class UploadComponent implements OnDestroy {
       validationResults: null,
       parsedData: null,
       detectedType: 'unknown',
+      site: null,
       borehole: null,
       series: [],
       quality: [],

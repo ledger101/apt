@@ -82,16 +82,23 @@ export interface AquiferTest {
   };
 }
 
-// New models for discharge reports per PRD
-export interface Borehole {
-  boreholeId: string;
-  boreholeNo: string;
+// New models for discharge reports per PRD - Site-based organization
+export interface Site {
+  siteId: string; // Slugified siteName
   siteName: string;
   coordinates?: { lat: number; lon: number };
   client?: string;
   contractor?: string;
   province?: string;
   district?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Borehole {
+  boreholeId: string;
+  boreholeNo: string;
+  altBhNo?: string;
   elevation_m?: number;
   boreholeDepth_m?: number;
   datumAboveCasing_m?: number;
