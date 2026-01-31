@@ -116,7 +116,20 @@ export interface DischargePoint {
 
 export interface Series {
   seriesId: string;
-  seriesType: 'discharge_rate' | 'recovery' | 'discharge' | 'obs_hole_1' | 'obs_hole_2' | 'obs_hole_3';
+  seriesType: 
+    | 'discharge_rate' 
+    | 'recovery' 
+    | 'discharge' 
+    | 'discharge_recovery'
+    | 'obs_hole_1' 
+    | 'obs_hole_2' 
+    | 'obs_hole_3'
+    | 'obshole1'
+    | 'obshole1_recovery'
+    | 'obshole2'
+    | 'obshole2_recovery'
+    | 'obshole3'
+    | 'obshole3_recovery';
   rateIndex?: number; // for discharge_rate
   pageIndex: number; // for chunking
   points: DischargePoint[];
@@ -154,6 +167,12 @@ export interface DischargeTest {
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+
+  // View properties
+  boreholeId?: string;
+  dischargeRate?: number;
+  contractor?: string;
+  province?: string;
 }
 
 export interface ParseJob {

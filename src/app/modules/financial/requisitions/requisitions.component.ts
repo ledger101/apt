@@ -40,9 +40,9 @@ import { Router } from '@angular/router';
   styles: []
 })
 export class RequisitionsComponent {
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
   goBack() {
-    this.router.navigate(['/finance']);
+    this.router.navigate(['/financial']);
   }
 }

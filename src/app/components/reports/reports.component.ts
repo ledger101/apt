@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FirestoreService } from '../../services/firestore.service';
 import { Report } from '../../models/pumping-data.model';
+import { DischargeReportsComponent } from './discharge-reports.component';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DischargeReportsComponent],
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.scss']
 })
@@ -17,6 +18,7 @@ export class ReportsComponent implements OnInit {
   loading = false;
   error: string | null = null;
   activeTab: string = 'list';
+  reportType: 'progress' | 'discharge' = 'progress';
 
   @Output() backToDashboard = new EventEmitter<void>();
 
@@ -25,6 +27,12 @@ export class ReportsComponent implements OnInit {
   async ngOnInit() {
     await this.loadReports();
   }
+  
+  setReportType(type: 'progress' | 'discharge') {
+    this.reportType = type;
+    this.selectedReport = null; // Clear selection when switching types
+  }
+
 
   async loadReports() {
     this.loading = true;

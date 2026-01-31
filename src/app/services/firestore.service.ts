@@ -132,11 +132,11 @@ export class FirestoreService {
   async saveBorehole(borehole: Borehole): Promise<void> {
     try {
       const boreholesCollection = collection(this.firestore, 'boreholes');
-      const boreholeData = {
+      const boreholeData = this.cleanForFirestore({
         ...borehole,
         createdAt: borehole.createdAt,
         updatedAt: borehole.updatedAt
-      };
+      });
       await addDoc(boreholesCollection, boreholeData);
       console.log('Borehole saved successfully:', borehole.boreholeId);
     } catch (error) {
@@ -146,22 +146,70 @@ export class FirestoreService {
   }
 
   /**
+   * Helper to remove undefined values which Firestore doesn't support
+   */
+  private cleanForFirestore(obj: any): any {
+    if (obj === null || obj === undefined) return null;
+    if (obj instanceof Date || obj instanceof Timestamp) return obj;
+    if (Array.isArray(obj)) return obj.map(v => this.cleanForFirestore(v));
+    if (typeof obj !== 'object') return obj;
+
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = this.cleanForFirestore(value);
+      }
+    }
+    return cleaned;
+  }
+
+  /**
    * Save a discharge test to Firestore
    */
   async saveDischargeTest(test: DischargeTest): Promise<void> {
     try {
       const testsCollection = collection(this.firestore, 'tests');
-      const testData = {
+      const testData = this.cleanForFirestore({
         ...test,
         startTime: test.startTime ? Timestamp.fromDate(test.startTime) : null,
         endTime: test.endTime ? Timestamp.fromDate(test.endTime) : null,
         createdAt: test.createdAt,
         updatedAt: test.updatedAt
-      };
+      });
       await addDoc(testsCollection, testData);
       console.log('Discharge test saved successfully:', test.testId);
     } catch (error) {
       console.error('Error saving discharge test:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all discharge tests from Firestore
+   */
+  async getDischargeTests(): Promise<DischargeTest[]> {
+    try {
+      const testsCollection = collection(this.firestore, 'tests');
+      const q = query(testsCollection, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+
+      const tests: DischargeTest[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        tests.push({
+          ...data,
+          testId: doc.id,
+          startTime: data['startTime']?.toDate ? data['startTime'].toDate() : (data['startTime'] || null),
+          endTime: data['endTime']?.toDate ? data['endTime'].toDate() : (data['endTime'] || null),
+          createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : (data['createdAt'] || new Date()),
+          updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : (data['updatedAt'] || new Date())
+        } as any);
+      });
+
+      console.log(`Retrieved ${tests.length} discharge tests`);
+      return tests;
+    } catch (error) {
+      console.error('Error getting discharge tests:', error);
       throw error;
     }
   }
@@ -173,10 +221,10 @@ export class FirestoreService {
     try {
       for (const s of series) {
         const seriesCollection = collection(this.firestore, `tests/${testId}/series`);
-        const seriesData = {
+        const seriesData = this.cleanForFirestore({
           ...s,
           createdAt: s.createdAt
-        };
+        });
         await addDoc(seriesCollection, seriesData);
       }
       console.log('Series saved successfully for test:', testId);
@@ -193,10 +241,10 @@ export class FirestoreService {
     try {
       for (const q of quality) {
         const qualityCollection = collection(this.firestore, `tests/${testId}/quality`);
-        const qualityData = {
+        const qualityData = this.cleanForFirestore({
           ...q,
           createdAt: q.createdAt
-        };
+        });
         await addDoc(qualityCollection, qualityData);
       }
       console.log('Quality saved successfully for test:', testId);

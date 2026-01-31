@@ -565,7 +565,7 @@
             <div class="mt-4">
               <h5 class="text-sm font-medium text-gray-900">Series:</h5>
               <ul class="list-disc list-inside text-sm text-gray-600">
-                <li *ngFor="let s of state.series">{{ s.seriesType }}: {{ s.points.length }} points</li>
+                <li *ngFor="let s of state.series">{{ getSeriesTypeName(s.seriesType) }}: {{ s.points.length }} points</li>
               </ul>
             </div>
           </div>
@@ -588,7 +588,7 @@
             <h4 class="text-sm font-semibold text-gray-900">Time Series Data</h4>
             <div *ngIf="state.series && state.series.length > 0" class="space-y-6">
               <div *ngFor="let series of state.series; let i = index" class="border rounded-lg p-4">
-                <h5 class="text-sm font-medium text-gray-900 mb-2">{{ series.seriesType }} Series ({{ series.points.length }} points)</h5>
+                <h5 class="text-sm font-medium text-gray-900 mb-2">{{ getSeriesTypeName(series.seriesType) }} ({{ series.points.length }} points)</h5>
                 <div class="overflow-x-auto">
                   <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
