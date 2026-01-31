@@ -76,7 +76,7 @@ export class DashboardComponent {
       description: 'Progress invoicing and expense management',
       icon: 'dollar-sign',
       color: 'yellow',
-      route: '/finance'
+      route: '/financial'
     },
     {
       id: 'operations',
@@ -96,8 +96,8 @@ export class DashboardComponent {
     },
     {
       id: 'reports',
-      title: 'Progress Reports',
-      description: 'View and manage pumping progress reports',
+      title: 'Enterprise Reports',
+      description: 'View and manage pumping progress and discharge reports',
       icon: 'package',
       color: 'yellow',
       route: '/reports'

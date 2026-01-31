@@ -1,5 +1,6 @@
 import { Component, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { Timestamp } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 
 import { CommonModule } from '@angular/common';
@@ -9,7 +10,7 @@ import { Subject, takeUntil } from 'rxjs';
 // import { DataUploadService, UploadProgress } from '../../services/data-upload.service';
 import { ExcelParsingService } from '../../services/excel-parsing.service';
 import { FirestoreService } from '../../services/firestore.service';
-import { Report, ValidationResult, AquiferTest, DischargeTest, Borehole, Series, Quality } from '../../models';
+import { Report, ValidationResult, AquiferTest, DischargeTest, Site, Borehole, Series, Quality } from '../../models';
 import { BaseChartDirective } from 'ng2-charts';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { ChartConfiguration, ChartType } from 'chart.js';
@@ -22,6 +23,7 @@ interface UploadState {
   validationResults: ValidationResult | null;
   parsedData: Report | AquiferTest | DischargeTest | null;
   detectedType: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
+  site: Site | null;
   borehole: Borehole | null;
   series: Series[];
   quality: Quality[];
@@ -54,6 +56,7 @@ export class UploadComponent implements OnDestroy {
     validationResults: null,
     parsedData: null,
     detectedType: 'unknown',
+    site: null,
     borehole: null,
     series: [],
     quality: [],
@@ -212,6 +215,7 @@ export class UploadComponent implements OnDestroy {
       this.state.validationResults = result.validation;
       this.state.parsedData = result.data;
       this.state.detectedType = result.type;
+      this.state.site = result.site;
       this.state.borehole = result.borehole;
       this.state.series = result.series || [];
       this.state.quality = result.quality || [];
@@ -282,33 +286,61 @@ export class UploadComponent implements OnDestroy {
         // It's an AquiferTest
         await this.firestoreService.saveAquiferTest(this.state.parsedData as AquiferTest);
       } else if (this.isDischargeTest(this.state.parsedData)) {
-        // It's a DischargeTest
+        // It's a DischargeTest - save with site-based structure
         const test = this.state.parsedData as DischargeTest;
         const sourcePath = `uploads/${this.state.selectedFile?.name || 'unknown'}`;
         test.sourceFilePath = sourcePath;
 
-        if (this.state.borehole) {
-          await this.firestoreService.saveBorehole(this.state.borehole);
+        // Save site first
+        if (this.state.site) {
+          await this.firestoreService.saveSite(this.state.site);
         }
-        await this.firestoreService.saveDischargeTest(test);
-        await this.firestoreService.saveSeries(test.testId, this.state.series);
-        await this.firestoreService.saveQuality(test.testId, this.state.quality);
 
-        // Save parse job
-        const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
-        await this.firestoreService.saveParseJob({
-          jobId: `job-${Date.now()}`,
-          testRef: `tests/${test.testId}`,
-          status: 'parsed',
-          warnings: this.state.validationResults?.warnings || [],
-          counts: {
-            series: this.state.series.length,
-            points: totalPoints
-          },
-          sourceFilePath: sourcePath,
-          createdBy: 'user-id', // TODO: Get from Auth
-          createdAt: Timestamp.now()
-        });
+        // Save borehole under site
+        if (this.state.site && this.state.borehole) {
+          await this.firestoreService.saveBorehole(this.state.site.siteId, this.state.borehole);
+        }
+
+        // Save test under borehole
+        if (this.state.site && this.state.borehole) {
+          await this.firestoreService.saveDischargeTest(
+            this.state.site.siteId,
+            this.state.borehole.boreholeId,
+            test
+          );
+
+          // Save series under test
+          await this.firestoreService.saveSeries(
+            this.state.site.siteId,
+            this.state.borehole.boreholeId,
+            test.testId,
+            this.state.series
+          );
+
+          // Save quality under test
+          await this.firestoreService.saveQuality(
+            this.state.site.siteId,
+            this.state.borehole.boreholeId,
+            test.testId,
+            this.state.quality
+          );
+
+          // Save parse job with nested path reference
+          const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
+          await this.firestoreService.saveParseJob({
+            jobId: `job-${Date.now()}`,
+            testRef: `sites/${this.state.site.siteId}/boreholes/${this.state.borehole.boreholeId}/tests/${test.testId}`,
+            status: 'parsed',
+            warnings: this.state.validationResults?.warnings || [],
+            counts: {
+              series: this.state.series.length,
+              points: totalPoints
+            },
+            sourceFilePath: sourcePath,
+            createdBy: 'user-id', // TODO: Get from Auth
+            createdAt: Timestamp.now()
+          });
+        }
       }
 
 
@@ -319,8 +351,17 @@ export class UploadComponent implements OnDestroy {
       // Emit success event
       this.dataUploaded.emit(this.state.parsedData);
 
-      // Reset after delay
-      setTimeout(() => this.resetUpload(), 3000);
+      // Notify user via Swal
+      Swal.fire({
+        title: 'Success!',
+        text: 'Data has been successfully uploaded and saved.',
+        icon: 'success',
+        confirmButtonColor: '#3B82F6',
+        timer: 3000,
+        timerProgressBar: true
+      }).then(() => {
+        this.resetUpload();
+      });
 
     } catch (error: any) {
       console.error('Error saving to Firestore:', error);
@@ -353,6 +394,7 @@ export class UploadComponent implements OnDestroy {
       validationResults: null,
       parsedData: null,
       detectedType: 'unknown',
+      site: null,
       borehole: null,
       series: [],
       quality: [],
@@ -399,6 +441,26 @@ export class UploadComponent implements OnDestroy {
     return parts.length > 0 ? parts.join(', ') : 'No issues found';
   }
 
+  // Get friendly name for series type
+  getSeriesTypeName(seriesType: string): string {
+    const names: { [key: string]: string } = {
+      'discharge': 'Discharge Borehole',
+      'discharge_recovery': 'Discharge Borehole Recovery',
+      'discharge_rate': 'Discharge Rate',
+      'obshole1': 'Observation Hole 1',
+      'obshole1_recovery': 'Observation Hole 1 Recovery',
+      'obshole2': 'Observation Hole 2',
+      'obshole2_recovery': 'Observation Hole 2 Recovery',
+      'obshole3': 'Observation Hole 3',
+      'obshole3_recovery': 'Observation Hole 3 Recovery',
+      'obs_hole_1': 'Observation Hole 1',
+      'obs_hole_2': 'Observation Hole 2',
+      'obs_hole_3': 'Observation Hole 3',
+      'recovery': 'Recovery'
+    };
+    return names[seriesType] || seriesType;
+  }
+
   // Create chart data for aquifer test
   private createChartData(test: AquiferTest): ChartConfiguration {
     const labels = test.dataPoints.map(p => p.time.toString());
@@ -441,38 +503,79 @@ export class UploadComponent implements OnDestroy {
     };
   }
 
-  // Create chart data for discharge test
+  // Create chart data for discharge test - shows all series
   private createDischargeChart(series: Series[]): ChartConfiguration {
     if (series.length === 0) return this.createEmptyChart();
 
-    // Use the first series for now
-    const s = series[0];
-    const labels = s.points.map(p => (p.t_min || 0).toString());
-    const wlData = s.points.map(p => p.wl_m || 0);
-    const ddData = s.points.map(p => p.ddn_m || 0);
+    // Color palette for different series
+    const colors = [
+      'rgb(75, 192, 192)',   // teal
+      'rgb(255, 99, 132)',   // red
+      'rgb(54, 162, 235)',   // blue
+      'rgb(255, 206, 86)',   // yellow
+      'rgb(153, 102, 255)',  // purple
+      'rgb(255, 159, 64)',   // orange
+      'rgb(199, 199, 199)',  // grey
+      'rgb(83, 102, 255)',   // indigo
+    ];
 
-    const datasets = [];
-    if (wlData.some(v => v != null)) {
-      datasets.push({
-        label: 'Water Level (m)',
-        data: wlData,
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1
-      });
-    }
-    if (ddData.some(v => v != null)) {
-      datasets.push({
-        label: 'Drawdown (m)',
-        data: ddData,
-        borderColor: 'rgb(255, 99, 132)',
-        tension: 0.1
-      });
+    // Get series type labels
+    const seriesLabels: { [key: string]: string } = {
+      'discharge': 'Discharge Borehole',
+      'discharge_recovery': 'Discharge Recovery',
+      'obshole1': 'Observation Hole 1',
+      'obshole1_recovery': 'Obs Hole 1 Recovery',
+      'obshole2': 'Observation Hole 2',
+      'obshole2_recovery': 'Obs Hole 2 Recovery',
+      'obshole3': 'Observation Hole 3',
+      'obshole3_recovery': 'Obs Hole 3 Recovery',
+      'recovery': 'Recovery',
+      'discharge_rate': 'Discharge Rate'
+    };
+
+    const datasets: any[] = [];
+    let colorIndex = 0;
+
+    // Create datasets for each series
+    for (const s of series) {
+      const label = seriesLabels[s.seriesType] || s.seriesType;
+      const color = colors[colorIndex % colors.length];
+      
+      // Only add if there's data
+      if (s.points.length > 0) {
+        // Water Level dataset
+        const wlData = s.points.map(p => ({ x: p.t_min || 0, y: p.wl_m }));
+        if (wlData.some(p => p.y != null)) {
+          datasets.push({
+            label: `${label} - WL (m)`,
+            data: wlData.filter(p => p.y != null),
+            borderColor: color,
+            backgroundColor: color,
+            tension: 0.1,
+            pointRadius: 2
+          });
+        }
+
+        // Drawdown dataset (different shade)
+        const ddData = s.points.map(p => ({ x: p.t_min || 0, y: p.ddn_m }));
+        if (ddData.some(p => p.y != null)) {
+          datasets.push({
+            label: `${label} - Drawdown (m)`,
+            data: ddData.filter(p => p.y != null),
+            borderColor: color.replace('rgb', 'rgba').replace(')', ', 0.5)'),
+            backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.5)'),
+            borderDash: [5, 5],
+            tension: 0.1,
+            pointRadius: 2
+          });
+        }
+      }
+      colorIndex++;
     }
 
     return {
-      type: 'line',
+      type: 'scatter',
       data: {
-        labels: labels,
         datasets: datasets
       },
       options: {
@@ -480,11 +583,16 @@ export class UploadComponent implements OnDestroy {
         plugins: {
           title: {
             display: true,
-            text: `Discharge Test: ${s.seriesType}`
+            text: 'Constant Discharge Test - All Series'
+          },
+          legend: {
+            display: true,
+            position: 'bottom'
           }
         },
         scales: {
           x: {
+            type: 'linear',
             title: {
               display: true,
               text: 'Time (minutes)'
@@ -494,7 +602,8 @@ export class UploadComponent implements OnDestroy {
             title: {
               display: true,
               text: 'Level (meters)'
-            }
+            },
+            reverse: false
           }
         }
       }

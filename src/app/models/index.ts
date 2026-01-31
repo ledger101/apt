@@ -13,6 +13,7 @@ export type {
   Personnel,
   AquiferTest,
   AquiferDataPoint,
+  Site,
   Borehole,
   DischargePoint,
   Series,
