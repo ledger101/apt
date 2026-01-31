@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div *ngIf="!selectedTest" class="space-y-4">
     <div class="bg-white shadow overflow-hidden sm:rounded-md">
       <ul class="divide-y divide-gray-200">
         <li *ngFor="let test of tests" (click)="selectTest(test)" class="block hover:bg-gray-50 cursor-pointer transition duration-150 ease-in-out">
@@ -50,5 +50,132 @@
        <div *ngIf="loading" class="flex justify-center items-center py-12">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
        </div>
+    </div>
+  </div>
+
+  <!-- Detail View -->
+  <div *ngIf="selectedTest" class="bg-white shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+      <div>
+        <h3 class="text-lg leading-6 font-medium text-gray-900">
+          Discharge Test Details: {{ selectedTest.boreholeId }}
+        </h3>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+          {{ selectedTest.testType }} - {{ formatDate(selectedTest.createdAt) }}
+        </p>
+      </div>
+      <button (click)="backToList()" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        Back to List
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex px-6 space-x-8" aria-label="Tabs">
+        <button
+          (click)="activeTab = 'summary'"
+          [class.border-blue-500]="activeTab === 'summary'"
+          [class.text-blue-600]="activeTab === 'summary'"
+          [class.border-transparent]="activeTab !== 'summary'"
+          [class.text-gray-500]="activeTab !== 'summary'"
+          class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300 transition-colors"
+        >
+          Summary
+        </button>
+        <button
+          (click)="activeTab = 'data'"
+          [class.border-blue-500]="activeTab === 'data'"
+          [class.text-blue-600]="activeTab === 'data'"
+          [class.border-transparent]="activeTab !== 'data'"
+          [class.text-gray-500]="activeTab !== 'data'"
+          class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300 transition-colors"
+        >
+          Readings Data
+        </button>
+      </nav>
+    </div>
+
+    <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
+      
+      <!-- Summary Tab -->
+      <dl *ngIf="activeTab === 'summary'" class="sm:divide-y sm:divide-gray-200">
+        <!-- Site/Contractor Info -->
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Contractor</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ selectedTest.contractor || 'N/A' }}</dd>
+        </div>
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Province</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ selectedTest.province || 'N/A' }}</dd>
+        </div>
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Discharge Rate</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ selectedTest.dischargeRate ? selectedTest.dischargeRate + ' L/s' : 'N/A' }}</dd>
+        </div>
+
+        <!-- Summary Data -->
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Static Water Level</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ selectedTest.summary.staticWL_m != null ? selectedTest.summary.staticWL_m + ' m' : 'N/A' }}</dd>
+        </div>
+        <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+           <dt class="text-sm font-medium text-gray-500">Pump Description</dt>
+           <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+             Depth: {{ selectedTest.summary.pump?.depth_m || 'N/A' }} m, 
+             Inlet: {{ selectedTest.summary.pump?.inletDiam_mm || 'N/A' }} mm, 
+             Type: {{ selectedTest.summary.pump?.type || 'N/A' }}
+           </dd>
+        </div>
+         <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+           <dt class="text-sm font-medium text-gray-500">Notes</dt>
+           <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+             {{ selectedTest.summary.notes || 'None' }}
+           </dd>
+        </div>
+      </dl>
+
+      <!-- Data Tab -->
+      <div *ngIf="activeTab === 'data'" class="p-6">
+        <div *ngIf="loadingSeries" class="flex justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="ml-2">Loading series data...</span>
+        </div>
+
+        <div *ngIf="!loadingSeries && seriesData.length === 0" class="text-center py-8 text-gray-500">
+            No readings found for this test.
+        </div>
+
+        <div *ngIf="!loadingSeries && seriesData.length > 0" class="space-y-8">
+            <div *ngFor="let series of seriesData" class="overflow-x-auto">
+                <h4 class="text-md font-semibold text-gray-800 mb-2 capitalize">
+                    {{ series.seriesType.replace('_', ' ') }}
+                    <span *ngIf="series.rateIndex" class="text-gray-500 text-sm">(Step {{ series.rateIndex }})</span>
+                </h4>
+                <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time (min)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Water Level (m)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drawdown (m)</th>
+                                <th scope="col" *ngIf="series.points[0]?.qlps !== undefined" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yield (L/s)</th>
+                                <th scope="col" *ngIf="series.points[0]?.recoverym !== undefined" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recovery (m)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr *ngFor="let point of series.points; let odd = odd" [class.bg-gray-50]="odd">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ point.t_min }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ point.wl_m }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ point.ddn_m }}</td>
+                                <td *ngIf="point.qlps !== undefined" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ point.qlps }}</td>
+                                <td *ngIf="point.recoverym !== undefined" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ point.recoverym }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+      </div>
+
     </div>
   </div>

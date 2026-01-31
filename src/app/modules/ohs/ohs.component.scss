@@ -81,11 +81,18 @@
 }
 
 .checklist-item {
-  margin-bottom: 25px;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
   background: white;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.checklist-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-color: #dee2e6;
 }
 
 .question {
@@ -97,7 +104,7 @@
 }
 
 .critical {
-  color: #dc3545;
+  color: black;
 }
 
 .critical-badge {
@@ -321,6 +328,17 @@
 .form-actions {
   text-align: center;
   margin-top: 40px;
+}
+
+.no-discipline-notification {
+  text-align: center;
+  padding: 40px;
+  background: #e9ecef;
+  border: 1px dashed #6c757d;
+  border-radius: 8px;
+  color: #555;
+  font-size: 1.2em;
+  margin-bottom: 40px;
 }
 
 .submit-btn {

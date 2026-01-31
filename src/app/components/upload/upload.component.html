@@ -400,8 +400,8 @@
             
             <!-- Read-only Discharge Test metadata -->
             <ng-container *ngIf="isDischargeTest(state.parsedData) && state.borehole">
-              <div><span class="text-gray-600 text-xs block">Client</span> <span class="font-medium text-sm">{{ state.borehole.client || 'N/A' }}</span></div>
-              <div><span class="text-gray-600 text-xs block">Contractor</span> <span class="font-medium text-sm">{{ state.borehole.contractor || 'N/A' }}</span></div>
+              <div><span class="text-gray-600 text-xs block">Client</span> <span class="font-medium text-sm">{{ state.site?.client || 'N/A' }}</span></div>
+              <div><span class="text-gray-600 text-xs block">Contractor</span> <span class="font-medium text-sm">{{ state.site?.contractor || 'N/A' }}</span></div>
             </ng-container>
           </div>
           
@@ -657,7 +657,7 @@
         [disabled]="!state.validationResults?.isValid || state.isUploading"
         class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
-        {{ state.isUploading ? 'Saving...' : 'Confirm & Save to Firestore' }}
+        {{ state.isUploading ? 'Saving...' : 'Confirm & Save' }}
       </button>
     </div>
 

@@ -31,6 +31,9 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "sweetalert2"
             ]
           },
           "configurations": {
@@ -38,13 +41,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "3MB"
+                  "maximumWarning": "900kB",
+                  "maximumError": "4MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "50kB"
+                  "maximumWarning": "8kB",
+                  "maximumError": "80kB"
                 }
               ],
               "outputHashing": "all"

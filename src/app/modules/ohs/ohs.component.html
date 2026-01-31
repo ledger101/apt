@@ -231,7 +231,7 @@
                 <span class="checkmark no">NO</span>
               </label>
             </div>
-            <div class="comments-section">
+            <div class="comments-section" *ngIf="item.response === 'no'">
               <label>Comments/Actions:</label>
               <textarea [(ngModel)]="item.comments" [name]="'comments-' + item.id" placeholder="Enter comments or corrective actions if NO"></textarea>
             </div>
@@ -241,7 +241,11 @@
     </section>
 
     <!-- Evaluation -->
-    <section class="form-section">
+    <div *ngIf="!selectedDiscipline" class="no-discipline-notification">
+      <p>Please select a specific <strong>Safety Discipline</strong> to proceed with the competency evaluation.</p>
+    </div>
+
+    <section class="form-section" *ngIf="selectedDiscipline">
       <h2>Evaluation</h2>
       <div class="form-row">
         <div class="form-group">

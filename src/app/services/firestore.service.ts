@@ -9,9 +9,11 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
-  orderBy
+  orderBy,
+  collectionGroup
 } from '@angular/fire/firestore';
 import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob } from '../models/pumping-data.model';
 
@@ -147,8 +149,8 @@ export class FirestoreService {
         await updateDoc(siteDocRef, { ...siteData, updatedAt: Timestamp.now() });
         console.log('Site updated successfully:', site.siteId);
       } else {
-        // Create new site
-        await addDoc(sitesCollection, siteData);
+        // Create new site with specific ID
+        await setDoc(siteDocRef, siteData);
         console.log('Site created successfully:', site.siteId);
       }
     } catch (error) {
@@ -162,17 +164,153 @@ export class FirestoreService {
    */
   async saveBorehole(siteId: string, borehole: Borehole): Promise<void> {
     try {
-      const boreholesCollection = collection(this.firestore, `sites/${siteId}/boreholes`);
+      const boreholeDocRef = doc(this.firestore, `sites/${siteId}/boreholes`, borehole.boreholeId);
       const boreholeData = this.cleanForFirestore({
         ...borehole,
         createdAt: borehole.createdAt,
         updatedAt: borehole.updatedAt
       });
-      await addDoc(boreholesCollection, boreholeData);
+      
+      const docSnap = await getDoc(boreholeDocRef);
+      if (docSnap.exists()) {
+        await updateDoc(boreholeDocRef, { ...boreholeData, updatedAt: Timestamp.now() });
+      } else {
+        await setDoc(boreholeDocRef, boreholeData);
+      }
       console.log('Borehole saved successfully under site:', siteId, borehole.boreholeId);
     } catch (error) {
       console.error('Error saving borehole:', error);
       throw error;
+    }
+  }
+
+  // ==================== NEW FLATTENED STRUCTURE METHODS ====================
+
+  /**
+   * Save consolidated Site/Borehole/Test Metadata to a single document
+   * Path: sites/{siteId}_{boreholeNo}
+   */
+  async saveBoreholeData(site: Site, borehole: Borehole, test: DischargeTest): Promise<void> {
+    try {
+      // Create composite ID: siteId_boreholeNo
+      const docId = `${site.siteId}_${borehole.boreholeNo}`;
+      const docRef = doc(this.firestore, 'sites', docId);
+      
+      const mergedData = this.cleanForFirestore({
+        // Site Data
+        siteId: site.siteId,
+        siteName: site.siteName,
+        client: site.client,
+        contractor: site.contractor,
+        province: site.province,
+        district: site.district,
+        coordinates: site.coordinates,
+        
+        // Borehole Data
+        boreholeNo: borehole.boreholeNo,
+        boreholeId: borehole.boreholeId,
+        altBhNo: borehole.altBhNo,
+        elevation_m: borehole.elevation_m,
+        boreholeDepth_m: borehole.boreholeDepth_m,
+        datumAboveCasing_m: borehole.datumAboveCasing_m,
+        existingPump: borehole.existingPump,
+        staticWL_mbdl: borehole.staticWL_mbdl,
+        casingHeight_magl: borehole.casingHeight_magl,
+        pumpDepth_m: borehole.pumpDepth_m,
+        pumpInletDiam_mm: borehole.pumpInletDiam_mm,
+        pumpType: borehole.pumpType,
+        swl_mbch: borehole.swl_mbch,
+
+        // Test Metadata (Summary)
+        testId: test.testId,
+        testType: test.testType,
+        testSummary: test.summary,
+        testStartTime: test.startTime ? Timestamp.fromDate(test.startTime) : null,
+        testEndTime: test.endTime ? Timestamp.fromDate(test.endTime) : null,
+        sourceFilePath: test.sourceFilePath,
+
+        updatedAt: Timestamp.now(),
+        createdAt: site.createdAt || Timestamp.now()
+      });
+
+      // Using setDoc with merge:true to update if exists, or create
+      await setDoc(docRef, mergedData, { merge: true });
+      console.log('Borehole Data saved successfully:', docId);
+    } catch (error) {
+      console.error('Error saving borehole data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save series data with specific mapped IDs
+   * Path: sites/{siteId}_{boreholeNo}/tests/{mappedId}
+   */
+  async saveSeriesData(siteId: string, boreholeNo: string, seriesList: Series[]): Promise<void> {
+     try {
+      const parentId = `${siteId}_${boreholeNo}`;
+      
+      for (const s of seriesList) {
+        let docId = '';
+        
+        // Mapping logic per user requirement
+        if (s.seriesType === 'discharge_rate') { 
+            // Step Discharge
+            docId = `discharge${s.rateIndex}`;
+        } else if (s.seriesType === 'recovery') {
+          // For step recovery or general recovery
+            docId = 'recovery';
+        } else if (s.seriesType === 'discharge') { 
+            // Constant Discharge
+            docId = 'dischargeborehole';
+        } else if (s.seriesType === 'obs_hole_1' || s.seriesType === 'obshole1') {
+            docId = 'observationHole1';
+        } else if (s.seriesType === 'obs_hole_2' || s.seriesType === 'obshole2') {
+            docId = 'observationHole2';
+        } else if (s.seriesType === 'obs_hole_3' || s.seriesType === 'obshole3') {
+            docId = 'observationHole3';
+        } else {
+             docId = `series_${s.seriesId}`;
+        }
+
+        const docRef = doc(this.firestore, `sites/${parentId}/tests`, docId);
+        const seriesData = this.cleanForFirestore({
+          points: s.points,
+          seriesType: s.seriesType,
+          rateIndex: s.rateIndex,
+          pageIndex: s.pageIndex,
+          createdAt: Timestamp.now()
+        });
+        
+        await setDoc(docRef, seriesData);
+      }
+      console.log('Series saved successfully for:', parentId);
+    } catch (error) {
+      console.error('Error saving series data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save quality data
+   * Path: sites/{siteId}_{boreholeNo}/tests/{qualityId}
+   */
+  async saveQualityData(siteId: string, boreholeNo: string, qualityList: Quality[]): Promise<void> {
+    try {
+        const parentId = `${siteId}_${boreholeNo}`;
+        for (const q of qualityList) {
+            const docId = `quality_rate${q.rateIndex}`;
+            const docRef = doc(this.firestore, `sites/${parentId}/tests`, docId);
+            const data = this.cleanForFirestore({
+                ...q,
+                createdAt: Timestamp.now()
+            });
+            await setDoc(docRef, data);
+        }
+        console.log('Quality saved successfully for:', parentId);
+    } catch (error) {
+        console.error('Error saving quality data:', error);
+        throw error;
     }
   }
 
@@ -199,7 +337,7 @@ export class FirestoreService {
    */
   async saveDischargeTest(siteId: string, boreholeId: string, test: DischargeTest): Promise<void> {
     try {
-      const testsCollection = collection(this.firestore, `sites/${siteId}/boreholes/${boreholeId}/tests`);
+      const testDocRef = doc(this.firestore, `sites/${siteId}/boreholes/${boreholeId}/tests`, test.testId);
       const testData = this.cleanForFirestore({
         ...test,
         startTime: test.startTime ? Timestamp.fromDate(test.startTime) : null,
@@ -207,7 +345,13 @@ export class FirestoreService {
         createdAt: test.createdAt,
         updatedAt: test.updatedAt
       });
-      await addDoc(testsCollection, testData);
+      
+      const docSnap = await getDoc(testDocRef);
+      if (docSnap.exists()) {
+        await updateDoc(testDocRef, { ...testData, updatedAt: Timestamp.now() });
+      } else {
+        await setDoc(testDocRef, testData);
+      }
       console.log('Discharge test saved successfully for borehole:', boreholeId);
     } catch (error) {
       console.error('Error saving discharge test:', error);
@@ -216,28 +360,41 @@ export class FirestoreService {
   }
 
   /**
-   * Get all discharge tests from Firestore (using collection group query)
+   * Get all discharge tests from Firestore (consolidated from sites collection)
    */
   async getDischargeTests(): Promise<DischargeTest[]> {
     try {
-      // Use collectionGroup to query all tests across all sites and boreholes
-      const testsQuery = query(
-        collection(this.firestore, 'tests'),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(testsQuery);
+      const sitesCollection = collection(this.firestore, 'sites');
+      const q = query(sitesCollection, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+
+      console.log(`Found ${querySnapshot.size} documents in sites collection`);
 
       const tests: DischargeTest[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        tests.push({
-          ...data,
-          testId: doc.id,
-          startTime: data['startTime']?.toDate ? data['startTime'].toDate() : (data['startTime'] || null),
-          endTime: data['endTime']?.toDate ? data['endTime'].toDate() : (data['endTime'] || null),
-          createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : (data['createdAt'] || new Date()),
-          updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : (data['updatedAt'] || new Date())
-        } as any);
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        // Relaxed check: Accept if it has testId OR boreholeId
+        if (data['testId'] || data['boreholeId']) {
+             tests.push({
+                  testId: data['testId'] || docSnap.id, // Fallback to doc ID if testId missing
+                  testType: data['testType'] || 'discharge_test',
+                  summary: data['testSummary'] || {},
+                  startTime: data['testStartTime']?.toDate ? data['testStartTime'].toDate() : null,
+                  endTime: data['testEndTime']?.toDate ? data['testEndTime'].toDate() : null,
+                  sourceFilePath: data['sourceFilePath'],
+                  status: 'parsed',
+                  createdBy: 'unknown',
+                  createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : new Date(),
+                  updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : new Date(),
+                  boreholeId: data['boreholeId'] || 'Unknown',
+                  boreholeRef: docSnap.id,
+                  // View properties
+                  contractor: data['contractor'],
+                  province: data['province'],
+                  // Attempt to get discharge rate from summary or root if saved, otherwise it might be missing
+                  dischargeRate: data['dischargeRate'] // Ensure this is saved if needed
+              } as any);
+        }
       });
 
       console.log(`Retrieved ${tests.length} discharge tests`);
@@ -255,27 +412,36 @@ export class FirestoreService {
     try {
       const tests: DischargeTest[] = [];
       
-      // Get all boreholes for this site
-      const boreholesCollection = collection(this.firestore, `sites/${siteId}/boreholes`);
-      const boreholesSnapshot = await getDocs(boreholesCollection);
+      const sitesCollection = collection(this.firestore, 'sites');
+      // Note: This naive filter relies on 'siteId' field being present. 
+      // Composite keys siteId_bhNo make basic where() query harder if siteId field is missing.
+      // But we save siteId in saveBoreholeData, so it should be fine.
+      const q = query(sitesCollection, where('siteId', '==', siteId));
+      const querySnapshot = await getDocs(q);
       
-      // For each borehole, get its tests
-      for (const boreholeDoc of boreholesSnapshot.docs) {
-        const testsCollection = collection(this.firestore, `sites/${siteId}/boreholes/${boreholeDoc.id}/tests`);
-        const testsSnapshot = await getDocs(query(testsCollection, orderBy('createdAt', 'desc')));
-        
-        testsSnapshot.forEach((testDoc) => {
-          const data = testDoc.data();
-          tests.push({
-            ...data,
-            testId: testDoc.id,
-            startTime: data['startTime']?.toDate ? data['startTime'].toDate() : (data['startTime'] || null),
-            endTime: data['endTime']?.toDate ? data['endTime'].toDate() : (data['endTime'] || null),
-            createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : (data['createdAt'] || new Date()),
-            updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : (data['updatedAt'] || new Date())
-          } as any);
-        });
-      }
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data['testId'] || data['boreholeId']) {
+             tests.push({
+                  testId: data['testId'] || docSnap.id,
+                  testType: data['testType'] || 'discharge_test',
+                  summary: data['testSummary'] || {},
+                  startTime: data['testStartTime']?.toDate ? data['testStartTime'].toDate() : null,
+                  endTime: data['testEndTime']?.toDate ? data['testEndTime'].toDate() : null,
+                  sourceFilePath: data['sourceFilePath'],
+                  status: 'parsed',
+                  createdBy: 'unknown',
+                  createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : new Date(),
+                  updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : new Date(),
+                  boreholeId: data['boreholeId'] || 'Unknown',
+                  boreholeRef: docSnap.id,
+                  // View properties
+                  contractor: data['contractor'],
+                  province: data['province'],
+                  dischargeRate: data['dischargeRate']
+              } as any);
+        }
+      });
       
       console.log(`Retrieved ${tests.length} tests for site:`, siteId);
       return tests;
@@ -290,17 +456,18 @@ export class FirestoreService {
    */
   async getBoreholesBySite(siteId: string): Promise<Borehole[]> {
     try {
-      const boreholesCollection = collection(this.firestore, `sites/${siteId}/boreholes`);
-      const querySnapshot = await getDocs(boreholesCollection);
+      const sitesCollection = collection(this.firestore, 'sites');
+      const q = query(sitesCollection, where('siteId', '==', siteId));
+      const querySnapshot = await getDocs(q);
       
       const boreholes: Borehole[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         boreholes.push({
           ...data,
-          boreholeId: doc.id,
-          createdAt: data['createdAt'],
-          updatedAt: data['updatedAt']
+          boreholeId: data['boreholeId'] || docSnap.id, // Fallback
+          createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : null,
+          updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : null
         } as Borehole);
       });
       
@@ -308,6 +475,39 @@ export class FirestoreService {
       return boreholes;
     } catch (error) {
       console.error('Error getting boreholes by site:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all series data for a specific borehole test record
+   * Path: sites/{siteId}_{boreholeNo}/tests/
+   */
+  async getTestSeries(boreholeRef: string): Promise<Series[]> {
+    try {
+      // boreholeRef is the ID of the document in 'sites' collection (e.g. 'SiteA_BH01')
+      const seriesCollection = collection(this.firestore, `sites/${boreholeRef}/tests`);
+      const querySnapshot = await getDocs(seriesCollection);
+      
+      const seriesList: Series[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Check if it looks like a series (has points or is one of the known IDs)
+        if (data['points'] || ['discharge1', 'discharge2', 'discharge3', 'recovery', 'dischargeborehole'].includes(doc.id) || doc.id.startsWith('observationHole')) {
+             seriesList.push({
+                 seriesId: doc.id,
+                 seriesType: data['seriesType'] || doc.id,
+                 rateIndex: data['rateIndex'],
+                 pageIndex: data['pageIndex'],
+                 points: data['points'] || [],
+                 createdAt: data['createdAt']
+             } as Series);
+        }
+      });
+      console.log(`Retrieved ${seriesList.length} series for ${boreholeRef}`);
+      return seriesList;
+    } catch (error) {
+      console.error('Error getting test series:', error);
       throw error;
     }
   }

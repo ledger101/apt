@@ -1,5 +1,5 @@
-@import '../../../styles/variables';
-@import '../../../styles/mixins';
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
 .navbar {
     background-color: $secondary-500;
@@ -42,14 +42,20 @@
     gap: $spacing-6;
 
     @media (max-width: $breakpoint-tablet) {
-        position: absolute;
+        position: fixed;
         top: 64px;
         left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
+        height: calc(100vh - 64px);
         flex-direction: column;
+        justify-content: flex-start;
         background-color: $secondary-500;
         padding: $spacing-4;
         display: none;
+        overflow-y: auto;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
 
         &.active {
             display: flex;

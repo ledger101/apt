@@ -96,7 +96,7 @@ export class ExcelParsingService {
       boreholeNo: 'C3',       // Borehole No
       siteName: 'P4',         // Site Name
       client: 'P5',           // Client
-      contractor: 'C7',       // Contractor
+      contractor: 'P3',       // Contractor
       altBhNo: 'G5',
       latitude: 'G7',
       longitude: 'G8',

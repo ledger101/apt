@@ -1,4 +1,4 @@
-@import 'variables';
+@use 'variables' as *;
 
 // Responsive breakpoints
 @media (max-width: $breakpoint-tablet) {

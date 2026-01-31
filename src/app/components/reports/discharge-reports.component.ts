@@ -1,7 +1,7 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FirestoreService } from '../../services/firestore.service';
-import { DischargeTest } from '../../models/pumping-data.model';
+import { DischargeTest, Series } from '../../models/pumping-data.model';
 
 @Component({
   selector: 'app-discharge-reports',
@@ -13,8 +13,11 @@ import { DischargeTest } from '../../models/pumping-data.model';
 export class DischargeReportsComponent implements OnInit {
   tests: DischargeTest[] = [];
   selectedTest: DischargeTest | null = null;
+  seriesData: Series[] = [];
   loading = false;
+  loadingSeries = false;
   error: string | null = null;
+  activeTab: 'summary' | 'data' = 'summary';
 
   @Output() testSelected = new EventEmitter<DischargeTest>();
 
@@ -37,10 +40,27 @@ export class DischargeReportsComponent implements OnInit {
     }
   }
 
-  selectTest(test: DischargeTest) {
+  async selectTest(test: DischargeTest) {
     this.selectedTest = test;
     this.testSelected.emit(test);
-    // You might want to show details here or emit event
+    this.seriesData = [];
+    this.activeTab = 'summary'; // Reset tab
+
+    if (test.boreholeRef) {
+      this.loadingSeries = true;
+      try {
+        this.seriesData = await this.firestoreService.getTestSeries(test.boreholeRef);
+      } catch (err) {
+        console.error('Failed to load series data', err);
+      } finally {
+        this.loadingSeries = false;
+      }
+    }
+  }
+
+  backToList() {
+    this.selectedTest = null;
+    this.seriesData = [];
   }
 
   formatDate(date: any): string {

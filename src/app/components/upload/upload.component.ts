@@ -291,45 +291,35 @@ export class UploadComponent implements OnDestroy {
         const sourcePath = `uploads/${this.state.selectedFile?.name || 'unknown'}`;
         test.sourceFilePath = sourcePath;
 
-        // Save site first
-        if (this.state.site) {
-          await this.firestoreService.saveSite(this.state.site);
-        }
-
-        // Save borehole under site
+        // Save using FLATTENED STRUCTURE (Site_BoreholeNo)
         if (this.state.site && this.state.borehole) {
-          await this.firestoreService.saveBorehole(this.state.site.siteId, this.state.borehole);
-        }
-
-        // Save test under borehole
-        if (this.state.site && this.state.borehole) {
-          await this.firestoreService.saveDischargeTest(
-            this.state.site.siteId,
-            this.state.borehole.boreholeId,
-            test
+          
+          // 1. Save Base Metadata Document
+          await this.firestoreService.saveBoreholeData(
+              this.state.site,
+              this.state.borehole,
+              test
           );
 
-          // Save series under test
-          await this.firestoreService.saveSeries(
+          // 2. Save Test Series with specific IDs
+          await this.firestoreService.saveSeriesData(
             this.state.site.siteId,
-            this.state.borehole.boreholeId,
-            test.testId,
+            this.state.borehole.boreholeNo,
             this.state.series
           );
 
-          // Save quality under test
-          await this.firestoreService.saveQuality(
+          // 3. Save Quality Data
+          await this.firestoreService.saveQualityData(
             this.state.site.siteId,
-            this.state.borehole.boreholeId,
-            test.testId,
+            this.state.borehole.boreholeNo,
             this.state.quality
           );
 
-          // Save parse job with nested path reference
+          // Save parse job with updated reference
           const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
           await this.firestoreService.saveParseJob({
             jobId: `job-${Date.now()}`,
-            testRef: `sites/${this.state.site.siteId}/boreholes/${this.state.borehole.boreholeId}/tests/${test.testId}`,
+            testRef: `sites/${this.state.site.siteId}_${this.state.borehole.boreholeNo}`,
             status: 'parsed',
             warnings: this.state.validationResults?.warnings || [],
             counts: {
