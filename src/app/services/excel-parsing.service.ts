@@ -431,22 +431,17 @@ export class ExcelParsingService {
     const borehole: Borehole = {
       boreholeId: this.slugify(normalized.meta.boreholeNo || 'unknown'),
       boreholeNo: normalized.meta.boreholeNo || '',
-      siteName: normalized.meta.siteName || '',
-      coordinates: normalized.meta.latitude && normalized.meta.longitude ? { lat: normalized.meta.latitude, lon: normalized.meta.longitude } : undefined,
-      client: normalized.meta.client,
-      contractor: normalized.meta.contractor,
-      province: normalized.meta.province,
-      district: normalized.meta.district,
-      elevation_m: normalized.meta.elevationm,
-      boreholeDepth_m: normalized.meta.boreholeDepthm,
-      datumAboveCasing_m: normalized.meta.datumAboveCasingm,
-      existingPump: normalized.meta.existingPump,
-      staticWL_mbdl: normalized.meta.staticWLmbdl,
-      casingHeight_magl: normalized.meta.casingHeightmagl,
-      pumpDepth_m: normalized.meta.pumpDepthm,
-      pumpInletDiam_mm: normalized.meta.pumpInletDiammm,
-      pumpType: normalized.meta.pumpType,
-      swl_mbch: normalized.meta.swlmbch,
+      altBhNo: normalized.meta.altBhNo ?? undefined,
+      elevation_m: normalized.meta.elevationm ?? undefined,
+      boreholeDepth_m: normalized.meta.boreholeDepthm ?? undefined,
+      datumAboveCasing_m: normalized.meta.datumAboveCasingm ?? undefined,
+      existingPump: normalized.meta.existingPump ?? undefined,
+      staticWL_mbdl: normalized.meta.staticWLmbdl ?? undefined,
+      casingHeight_magl: normalized.meta.casingHeightmagl ?? undefined,
+      pumpDepth_m: normalized.meta.pumpDepthm ?? undefined,
+      pumpInletDiam_mm: normalized.meta.pumpInletDiammm ?? undefined,
+      pumpType: normalized.meta.pumpType ?? undefined,
+      swl_mbch: normalized.meta.swlmbch ?? undefined,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
@@ -454,19 +449,19 @@ export class ExcelParsingService {
     const test: DischargeTest = {
       testId: `discharge-${Date.now()}`,
       testType: normalized.testType,
-      boreholeRef: `boreholes/${borehole.boreholeId}`,
-      startTime: normalized.startISO ? new Date(normalized.startISO) : undefined,
-      endTime: normalized.meta.endISO ? new Date(normalized.meta.endISO) : undefined,
+      boreholeRef: `sites/${siteId}/boreholes/${borehole.boreholeId}`,
+      ...(normalized.startISO ? { startTime: new Date(normalized.startISO) } : {}),
+      ...(normalized.meta.endISO ? { endTime: new Date(normalized.meta.endISO) } : {}),
       summary: {
-        availableDrawdown_m: normalized.meta.availableDrawdownm,
-        totalTimePumped_min: normalized.meta.totalTimePumpedmin,
-        staticWL_m: normalized.meta.staticWLm || normalized.meta.staticWLmbdl,
+        availableDrawdown_m: normalized.meta.availableDrawdownm ?? undefined,
+        totalTimePumped_min: normalized.meta.totalTimePumpedmin ?? undefined,
+        staticWL_m: (normalized.meta.staticWLm || normalized.meta.staticWLmbdl) ?? undefined,
         pump: {
-          depth_m: normalized.meta.pumpDepthm,
-          inletDiam_mm: normalized.meta.pumpInletDiammm,
-          type: normalized.meta.pumpType
+          depth_m: normalized.meta.pumpDepthm ?? undefined,
+          inletDiam_mm: normalized.meta.pumpInletDiammm ?? undefined,
+          type: normalized.meta.pumpType ?? undefined
         },
-        notes: normalized.meta.notes
+        notes: normalized.meta.notes ?? undefined
       },
       sourceFilePath: '', // to be set later
       status: 'draft',
@@ -505,7 +500,13 @@ export class ExcelParsingService {
     return { data: test, site, borehole, series, quality, validation };
   }
 
-
+  /**
+   * Helper method to get cell value by cell reference (e.g., 'C5')
+   */
+  private getCellByRef(sheet: XLSX.WorkSheet, cellRef: string): any {
+    const cell = sheet[cellRef];
+    return cell ? (cell.v ?? cell.w ?? null) : null;
+  }
 
   /**
    * Helper method to extract data from a range using cell references
@@ -536,18 +537,6 @@ export class ExcelParsingService {
     
     return data;
   }
-
- 
-
-  /**
-   * Helper method to get cell value by cell reference (e.g., 'C5')
-   */
-  private getCellByRef(sheet: XLSX.WorkSheet, cellRef: string): any {
-    const cell = sheet[cellRef];
-    return cell ? (cell.v ?? cell.w ?? null) : null;
-  }
-
- 
 
   /**
    * Convert row-based data to DischargePoint format

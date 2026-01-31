@@ -143,9 +143,9 @@ const allTestsQuery = collectionGroup(firestore, 'tests');
 
 ## Rollout Plan
 1. ✅ Create storagePlan.md (this document)
-2. ⏳ Update models to include Site interface
-3. ⏳ Update FirestoreService with new save/query methods
-4. ⏳ Update ExcelParsingService to extract site data
-5. ⏳ Update UploadComponent to save site → borehole → test
+2. ✅ Update models to include Site interface
+3. ✅ Update FirestoreService with new save/query methods
+4. ✅ Update ExcelParsingService to extract site data
+5. ✅ Update UploadComponent to save site → borehole → test
 6. ⏳ Test with sample Excel files
 7. ⏳ Update reports/dashboard components to use new structure

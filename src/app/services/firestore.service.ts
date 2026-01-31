@@ -131,7 +131,6 @@ export class FirestoreService {
    */
   async saveSite(site: Site): Promise<void> {
     try {
-      const boreholesCollection = collection(this.firestore, 'boreholes');
       const sitesCollection = collection(this.firestore, 'sites');
       const siteData = this.cleanForFirestore({
         ...site,
@@ -194,8 +193,6 @@ export class FirestoreService {
     }
     return cleaned;
   }
-
- 
 
   /**
    * Save a discharge test under a borehole (nested structure)
