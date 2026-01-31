@@ -15,7 +15,7 @@ import {
   orderBy,
   collectionGroup
 } from '@angular/fire/firestore';
-import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob } from '../models/pumping-data.model';
+import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob, Invoice, InvoiceConfig } from '../models/pumping-data.model';
 
 @Injectable({
   providedIn: 'root'
@@ -740,6 +740,169 @@ export class FirestoreService {
       return docRef.id;
     } catch (error) {
       console.error('Error creating inventory transaction:', error);
+      throw error;
+    }
+  }
+
+  // ==================== INVOICE METHODS ====================
+
+  /**
+   * Save an invoice to Firestore
+   */
+  async saveInvoice(invoice: Invoice): Promise<string> {
+    try {
+      const invoicesCollection = collection(this.firestore, 'invoices');
+      const invoiceData = {
+        ...invoice,
+        reportDate: Timestamp.fromDate(invoice.reportDate),
+        invoiceDate: Timestamp.fromDate(invoice.invoiceDate),
+        createdAt: Timestamp.fromDate(invoice.createdAt),
+        updatedAt: Timestamp.fromDate(invoice.updatedAt)
+      };
+
+      const docRef = await addDoc(invoicesCollection, invoiceData);
+      console.log('Invoice saved successfully:', invoice.invoiceNumber);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all invoices from Firestore
+   */
+  async getInvoices(orgId?: string): Promise<Invoice[]> {
+    try {
+      const invoicesCollection = collection(this.firestore, 'invoices');
+      let q;
+
+      if (orgId) {
+        q = query(invoicesCollection, where('orgId', '==', orgId), orderBy('invoiceDate', 'desc'));
+      } else {
+        q = query(invoicesCollection, orderBy('invoiceDate', 'desc'));
+      }
+
+      const querySnapshot = await getDocs(q);
+
+      const invoices: Invoice[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        invoices.push({
+          ...data,
+          invoiceId: doc.id,
+          reportDate: data['reportDate']?.toDate ? data['reportDate'].toDate() : (data['reportDate'] || new Date()),
+          invoiceDate: data['invoiceDate']?.toDate ? data['invoiceDate'].toDate() : (data['invoiceDate'] || new Date()),
+          createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : (data['createdAt'] || new Date()),
+          updatedAt: data['updatedAt']?.toDate ? data['updatedAt'].toDate() : (data['updatedAt'] || new Date())
+        } as any);
+      });
+
+      console.log(`Retrieved ${invoices.length} invoices`);
+      return invoices;
+    } catch (error) {
+      console.error('Error getting invoices:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific invoice by ID
+   */
+  async getInvoice(invoiceId: string): Promise<Invoice | null> {
+    try {
+      const invoiceDoc = doc(this.firestore, 'invoices', invoiceId);
+      const docSnap = await getDoc(invoiceDoc);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          invoiceId: docSnap.id,
+          reportDate: data['reportDate']?.toDate() || new Date(),
+          invoiceDate: data['invoiceDate']?.toDate() || new Date(),
+          createdAt: data['createdAt']?.toDate() || new Date(),
+          updatedAt: data['updatedAt']?.toDate() || new Date(),
+          ...data
+        } as any;
+      } else {
+        console.log('No such invoice!');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an invoice
+   */
+  async updateInvoice(invoiceId: string, data: Partial<Invoice>): Promise<void> {
+    try {
+      const invoiceDoc = doc(this.firestore, 'invoices', invoiceId);
+      const updateData: any = { ...data };
+
+      // Convert Date fields to Timestamp if present
+      if (updateData.reportDate) {
+        updateData.reportDate = Timestamp.fromDate(updateData.reportDate as Date);
+      }
+      if (updateData.invoiceDate) {
+        updateData.invoiceDate = Timestamp.fromDate(updateData.invoiceDate as Date);
+      }
+      if (updateData.createdAt) {
+        updateData.createdAt = Timestamp.fromDate(updateData.createdAt as Date);
+      }
+      if (updateData.updatedAt) {
+        updateData.updatedAt = Timestamp.fromDate(updateData.updatedAt as Date);
+      }
+
+      await updateDoc(invoiceDoc, updateData);
+      console.log('Invoice updated successfully:', invoiceId);
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save invoice configuration
+   */
+  async saveInvoiceConfig(config: InvoiceConfig): Promise<void> {
+    try {
+      const configDocRef = doc(this.firestore, 'invoice-configs', config.orgId);
+      const configData = {
+        ...config,
+        updatedAt: Timestamp.fromDate(config.updatedAt)
+      };
+
+      await setDoc(configDocRef, configData, { merge: true });
+      console.log('Invoice config saved successfully for org:', config.orgId);
+    } catch (error) {
+      console.error('Error saving invoice config:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get invoice configuration for an organization
+   */
+  async getInvoiceConfig(orgId: string): Promise<InvoiceConfig | null> {
+    try {
+      const configDoc = doc(this.firestore, 'invoice-configs', orgId);
+      const docSnap = await getDoc(configDoc);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          ...data,
+          updatedAt: data['updatedAt']?.toDate() || new Date()
+        } as InvoiceConfig;
+      } else {
+        console.log('No invoice config found for org:', orgId);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting invoice config:', error);
       throw error;
     }
   }

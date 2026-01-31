@@ -10,6 +10,8 @@ import { Subject, takeUntil } from 'rxjs';
 // import { DataUploadService, UploadProgress } from '../../services/data-upload.service';
 import { ExcelParsingService } from '../../services/excel-parsing.service';
 import { FirestoreService } from '../../services/firestore.service';
+import { InvoiceService } from '../../services/invoice.service';
+import { InvoiceConfigService } from '../../services/invoice-config.service';
 import { Report, ValidationResult, AquiferTest, DischargeTest, Site, Borehole, Series, Quality } from '../../models';
 import { BaseChartDirective } from 'ng2-charts';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
@@ -75,6 +77,8 @@ export class UploadComponent implements OnDestroy {
     // private dataUploadService: DataUploadService,
     private excelParsingService: ExcelParsingService,
     private firestoreService: FirestoreService,
+    private invoiceService: InvoiceService,
+    private invoiceConfigService: InvoiceConfigService,
     private router: Router
   ) { }
 
@@ -281,7 +285,38 @@ export class UploadComponent implements OnDestroy {
       // Save data based on type
       if (this.isReport(this.state.parsedData)) {
         // It's a Report
-        await this.firestoreService.saveReport(this.state.parsedData as Report);
+        const report = this.state.parsedData as Report;
+        await this.firestoreService.saveReport(report);
+
+        // Generate invoice for the progress report
+        try {
+          this.state.uploadProgress = { stage: 'generating', message: 'Generating invoice...', percentage: 90 };
+
+          // Check if invoice already exists for this report
+          const invoiceExists = await this.invoiceService.invoiceExistsForReport(report.reportId);
+
+          if (!invoiceExists) {
+            // Get invoice configuration
+            const config = await this.invoiceConfigService.getConfig(report.orgId);
+
+            // Generate invoice
+            const invoice = await this.invoiceService.generateInvoiceFromReport(report, config);
+
+            // Save invoice
+            await this.invoiceService.saveInvoice(invoice);
+
+            // Increment invoice number for next invoice
+            await this.invoiceConfigService.incrementInvoiceNumber(report.orgId);
+
+            console.log('Invoice generated successfully:', invoice.invoiceNumber);
+          } else {
+            console.log('Invoice already exists for report:', report.reportId);
+          }
+        } catch (invoiceError: any) {
+          console.error('Error generating invoice:', invoiceError);
+          // Don't fail the upload if invoice generation fails
+          // Just log the error and continue
+        }
       } else if (this.isAquiferTest(this.state.parsedData)) {
         // It's an AquiferTest
         await this.firestoreService.saveAquiferTest(this.state.parsedData as AquiferTest);
@@ -623,3 +658,4 @@ export class UploadComponent implements OnDestroy {
     this.router.navigate(['/dashboard']);
   }
 }
+

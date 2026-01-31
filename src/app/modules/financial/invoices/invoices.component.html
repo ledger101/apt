@@ -1,0 +1,364 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+
+        <!-- Back to Financial Control -->
+        <button
+          (click)="goBack()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Financial Control
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="min-h-screen bg-gray-50 pt-20">
+  <div class="p-6">
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Invoices</h1>
+      <p class="mt-1 text-gray-600">Manage and view invoices generated from progress reports</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Search -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (input)="applyFilters()"
+            placeholder="Search by client, project, or invoice #..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select
+            [(ngModel)]="statusFilter"
+            (change)="applyFilters()"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Sent">Sent</option>
+            <option value="Paid">Paid</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
+
+        <!-- Date From -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+          <input
+            type="date"
+            [(ngModel)]="dateFrom"
+            (change)="applyFilters()"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+
+        <!-- Date To -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+          <input
+            type="date"
+            [(ngModel)]="dateTo"
+            (change)="applyFilters()"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+      </div>
+
+      <!-- Clear Filters -->
+      <div class="mt-4 flex justify-end">
+        <button
+          (click)="clearFilters()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+        >
+          Clear Filters
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <span class="ml-3 text-gray-600">Loading invoices...</span>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="error" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+      <div class="flex">
+        <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">Error</h3>
+          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoice List View -->
+    <div *ngIf="!loading && !selectedInvoice && !error" class="bg-white shadow rounded-lg">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Invoices ({{ filteredInvoices.length }})</h2>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredInvoices.length === 0" class="p-6 text-center text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No invoices found</h3>
+        <p class="mt-1 text-sm text-gray-500">Try adjusting your filters or upload some progress reports.</p>
+      </div>
+
+      <!-- Invoice Table -->
+      <div *ngIf="filteredInvoices.length > 0" class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project/Site</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr *ngFor="let invoice of filteredInvoices" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                {{ invoice.invoiceNumber }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ formatDate(invoice.invoiceDate) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ invoice.client }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ invoice.projectSiteArea }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ invoice.totalChargeableHours | number:'1.2-2' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ formatCurrency(invoice.totalAmount) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span [class]="getStatusClass(invoice.status)" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
+                  {{ invoice.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <button
+                  (click)="viewInvoice(invoice)"
+                  class="text-blue-600 hover:text-blue-900 font-medium"
+                >
+                  View Details
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Invoice Detail View -->
+    <div *ngIf="selectedInvoice" class="space-y-6">
+      <!-- Back Button -->
+      <div class="flex items-center space-x-4">
+        <button
+          (click)="backToList()"
+          class="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Invoices
+        </button>
+      </div>
+
+      <!-- Invoice Header -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">Invoice {{ selectedInvoice.invoiceNumber }}</h2>
+            <p class="mt-1 text-sm text-gray-600">Date: {{ formatDate(selectedInvoice.invoiceDate) }}</p>
+          </div>
+          <div class="text-right">
+            <span [class]="getStatusClass(selectedInvoice.status)" class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full">
+              {{ selectedInvoice.status }}
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span class="text-gray-600">Client:</span>
+            <span class="ml-2 font-medium">{{ selectedInvoice.client }}</span>
+          </div>
+          <div>
+            <span class="text-gray-600">Project/Site:</span>
+            <span class="ml-2 font-medium">{{ selectedInvoice.projectSiteArea }}</span>
+          </div>
+          <div>
+            <span class="text-gray-600">Rig:</span>
+            <span class="ml-2 font-medium">{{ selectedInvoice.rigNumber }}</span>
+          </div>
+          <div>
+            <span class="text-gray-600">Report Date:</span>
+            <span class="ml-2 font-medium">{{ formatDate(selectedInvoice.reportDate) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day Shift -->
+      <div *ngIf="selectedInvoice.dayShift" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Day Shift</h3>
+        <div class="mb-4 text-sm text-gray-600">
+          <span class="font-medium">Total Hours:</span> {{ selectedInvoice.dayShift.totalHours | number:'1.2-2' }} |
+          <span class="font-medium ml-4">Chargeable Hours:</span> {{ selectedInvoice.dayShift.chargeableHours | number:'1.2-2' }} |
+          <span class="font-medium ml-4">Amount:</span> {{ formatCurrency(selectedInvoice.dayShift.amount) }}
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Activity</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">From</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">To</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Chargeable</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr *ngFor="let activity of selectedInvoice.dayShift.activities">
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.order }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.activity }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.from }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.to }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.total }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.totalHours | number:'1.2-2' }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.chargeable ? 'Yes' : 'No' }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ formatCurrency(activity.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Night Shift -->
+      <div *ngIf="selectedInvoice.nightShift" class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Night Shift</h3>
+        <div class="mb-4 text-sm text-gray-600">
+          <span class="font-medium">Total Hours:</span> {{ selectedInvoice.nightShift.totalHours | number:'1.2-2' }} |
+          <span class="font-medium ml-4">Chargeable Hours:</span> {{ selectedInvoice.nightShift.chargeableHours | number:'1.2-2' }} |
+          <span class="font-medium ml-4">Amount:</span> {{ formatCurrency(selectedInvoice.nightShift.amount) }}
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Activity</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">From</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">To</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hours</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Chargeable</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr *ngFor="let activity of selectedInvoice.nightShift.activities">
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.order }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.activity }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.from }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.to }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.total }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.totalHours | number:'1.2-2' }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ activity.chargeable ? 'Yes' : 'No' }}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">{{ formatCurrency(activity.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Invoice Summary</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Charge Rate:</span>
+            <span class="font-medium">{{ formatCurrency(selectedInvoice.chargeRate) }}/hour</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Day Shift Hours:</span>
+            <span class="font-medium">{{ selectedInvoice.dayShift.chargeableHours | number:'1.2-2' }} hours</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Night Shift Hours:</span>
+            <span class="font-medium">{{ selectedInvoice.nightShift.chargeableHours | number:'1.2-2' }} hours</span>
+          </div>
+          <div class="border-t border-gray-200 pt-2 mt-2">
+            <div class="flex justify-between">
+              <span class="text-gray-900 font-semibold">Total Chargeable Hours:</span>
+              <span class="font-semibold">{{ selectedInvoice.totalChargeableHours | number:'1.2-2' }} hours</span>
+            </div>
+          </div>
+          <div class="border-t border-gray-200 pt-2 mt-2">
+            <div class="flex justify-between">
+              <span class="text-gray-900 font-semibold text-lg">Total Amount:</span>
+              <span class="font-semibold text-lg">{{ formatCurrency(selectedInvoice.totalAmount) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Update -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Update Status</h3>
+        <div class="flex items-center space-x-4">
+          <label class="block text-sm font-medium text-gray-700">Status:</label>
+          <select
+            [(ngModel)]="selectedInvoice.status"
+            (change)="updateStatus()"
+            class="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="Draft">Draft</option>
+            <option value="Sent">Sent</option>
+            <option value="Paid">Paid</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

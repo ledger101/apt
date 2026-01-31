@@ -34,5 +34,9 @@ export type {
   ValidationResult,
   PreStartCheck,
   PreStartCheckItem,
+  Invoice,
+  InvoiceShift,
+  InvoiceActivity,
+  InvoiceConfig,
 } from './pumping-data.model';
 

@@ -409,3 +409,71 @@ export interface PreStartCheck {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// ==================== INVOICE MODELS ====================
+
+export interface InvoiceActivity {
+  order: number;
+  activity: string;
+  from: string; // HH:mm
+  to: string; // HH:mm
+  total: string; // H:MM format
+  totalHours: number; // Decimal hours
+  chargeable: boolean;
+  amount: number; // totalHours * chargeRate (if chargeable)
+}
+
+export interface InvoiceShift {
+  totalHours: number;
+  chargeableHours: number;
+  activities: InvoiceActivity[];
+  amount: number; // chargeableHours * chargeRate
+}
+
+export interface Invoice {
+  invoiceId: string;
+  reportId: string; // Reference to progress report
+  orgId: string;
+  projectId: string;
+  siteId: string;
+
+  // Metadata from progress report
+  client: string;
+  projectSiteArea: string;
+  reportDate: Date;
+  rigNumber: string;
+
+  // Invoice details
+  invoiceNumber: string; // Auto-generated (e.g., INV-2024-001)
+  invoiceDate: Date;
+  status: 'Draft' | 'Sent' | 'Paid' | 'Overdue';
+
+  // Financial details
+  chargeRate: number; // USD per hour
+  totalAmount: number; // Total invoice amount
+
+  // Shift breakdowns
+  dayShift: InvoiceShift;
+  nightShift: InvoiceShift;
+
+  // Totals
+  totalChargeableHours: number;
+
+  // Audit
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InvoiceConfig {
+  configId: string;
+  orgId: string;
+  chargeRate: number; // USD per hour
+  currency: string; // Default: 'USD'
+  invoicePrefix: string; // Default: 'INV'
+  nextInvoiceNumber: number; // For auto-incrementing
+  taxRate?: number; // Optional tax rate percentage
+  notes?: string; // Default invoice notes
+  updatedAt: Date;
+  updatedBy: string;
+}

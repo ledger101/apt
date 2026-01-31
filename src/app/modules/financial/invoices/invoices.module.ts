@@ -8,7 +8,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [InvoicesComponent,  
+  imports: [
     CommonModule,
     RouterModule.forChild(routes)
   ]

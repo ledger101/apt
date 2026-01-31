@@ -1,0 +1,216 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+
+        <!-- Back to Financial Control -->
+        <button
+          (click)="goBack()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Financial Control
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="min-h-screen bg-gray-50 pt-20">
+  <div class="p-6">
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Invoice Configuration</h1>
+      <p class="mt-1 text-gray-600">Configure invoice settings for your organization</p>
+    </div>
+
+    <!-- Access Denied -->
+    <div *ngIf="!isAdmin && error" class="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div class="flex">
+        <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">Access Denied</h3>
+          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading && !error" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <span class="ml-3 text-gray-600">Loading configuration...</span>
+    </div>
+
+    <!-- Configuration Form -->
+    <div *ngIf="isAdmin && config && !loading" class="bg-white shadow rounded-lg p-6">
+      <!-- Success Message -->
+      <div *ngIf="success" class="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+        <div class="flex">
+          <svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-green-800">Success</h3>
+            <p class="mt-1 text-sm text-green-700">Invoice configuration saved successfully!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="error && isAdmin" class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex">
+          <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Error</h3>
+            <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form (ngSubmit)="saveConfig()">
+        <div class="space-y-6">
+          <!-- Charge Rate -->
+          <div>
+            <label for="chargeRate" class="block text-sm font-medium text-gray-700 mb-1">
+              Charge Rate (USD per hour)
+            </label>
+            <input
+              type="number"
+              id="chargeRate"
+              [(ngModel)]="config.chargeRate"
+              min="0"
+              step="0.01"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter charge rate"
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              The rate charged per hour for chargeable activities. Default: $20/hour
+            </p>
+          </div>
+
+          <!-- Currency -->
+          <div>
+            <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">
+              Currency
+            </label>
+            <input
+              type="text"
+              id="currency"
+              [(ngModel)]="config.currency"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter currency code (e.g., USD)"
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              The currency code for invoices. Default: USD
+            </p>
+          </div>
+
+          <!-- Invoice Prefix -->
+          <div>
+            <label for="invoicePrefix" class="block text-sm font-medium text-gray-700 mb-1">
+              Invoice Prefix
+            </label>
+            <input
+              type="text"
+              id="invoicePrefix"
+              [(ngModel)]="config.invoicePrefix"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter invoice prefix (e.g., INV)"
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              The prefix used for invoice numbers. Example: INV-2024-001. Default: INV
+            </p>
+          </div>
+
+          <!-- Next Invoice Number -->
+          <div>
+            <label for="nextInvoiceNumber" class="block text-sm font-medium text-gray-700 mb-1">
+              Next Invoice Number
+            </label>
+            <input
+              type="number"
+              id="nextInvoiceNumber"
+              [(ngModel)]="config.nextInvoiceNumber"
+              min="1"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter next invoice number"
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              The next invoice number to use. This will auto-increment after each invoice is generated.
+            </p>
+          </div>
+
+          <!-- Tax Rate (Optional) -->
+          <div>
+            <label for="taxRate" class="block text-sm font-medium text-gray-700 mb-1">
+              Tax Rate (%) - Optional
+            </label>
+            <input
+              type="number"
+              id="taxRate"
+              [(ngModel)]="config.taxRate"
+              min="0"
+              step="0.01"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter tax rate percentage"
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              Optional tax rate to apply to invoices. Leave empty if no tax is applied.
+            </p>
+          </div>
+
+          <!-- Notes (Optional) -->
+          <div>
+            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
+              Default Invoice Notes - Optional
+            </label>
+            <textarea
+              id="notes"
+              [(ngModel)]="config.notes"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter default notes for invoices"
+            ></textarea>
+            <p class="mt-1 text-xs text-gray-500">
+              Optional default notes that will appear on all invoices.
+            </p>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              (click)="cancel()"
+              class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              [disabled]="loading"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              Save Configuration
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

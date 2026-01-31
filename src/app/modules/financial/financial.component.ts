@@ -47,6 +47,10 @@ import { Router, RouterModule } from '@angular/router';
             <h2 class="text-lg font-semibold">Income & Expense</h2>
             <p>Track income and expenses</p>
           </a>
+          <a routerLink="invoice-config" class="block p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border">
+            <h2 class="text-lg font-semibold">Invoice Settings</h2>
+            <p>Configure invoice rates and settings</p>
+          </a>
         </div>
       </div>
     </div>
