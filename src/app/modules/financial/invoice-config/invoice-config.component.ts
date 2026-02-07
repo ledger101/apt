@@ -27,15 +27,6 @@ export class InvoiceConfigComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    // Check if user is admin
-    const userProfile = this.authService.getCurrentUserProfile();
-    this.isAdmin = userProfile?.role === 'Admin';
-
-    if (!this.isAdmin) {
-      this.error = 'Access denied. Only admin users can access invoice configuration.';
-      return;
-    }
-
     await this.loadConfig();
   }
 
