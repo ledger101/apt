@@ -14,6 +14,8 @@
 /.angular/cache
 /.ng/
 /.angular-cli.json
+/apt-next
+/next-apt
 
 # Node modules and dependency files
 /node_modules/
