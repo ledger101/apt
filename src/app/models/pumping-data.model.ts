@@ -505,6 +505,7 @@ export interface GoodsReceivedNote {
   poNumber?: string; // Denormalized for display
   supplierName?: string; // Denormalized for display
   projectId?: string; // Denormalized from PO
+  siteId?: string; // Denormalized from PO
   grnNumber: string; // Auto-generated (e.g., GRN-2024-001)
   dateReceived: Timestamp;
   receivedBy: string; // employee ID
