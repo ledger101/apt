@@ -9,6 +9,7 @@ const routes: Routes = [
   { path: 'invoices', loadChildren: () => import('./invoices/invoices.module').then(m => m.InvoicesModule) },
   { path: 'invoice-config', loadChildren: () => import('./invoice-config/invoice-config.module').then(m => m.InvoiceConfigModule) },
   { path: 'income-expense', loadChildren: () => import('./income-expense/income-expense.module').then(m => m.IncomeExpenseModule) },
+  { path: 'payroll', loadChildren: () => import('./payroll/payroll.module').then(m => m.PayrollModule) },
 ];
 
 @NgModule({

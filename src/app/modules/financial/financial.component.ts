@@ -51,6 +51,10 @@ import { Router, RouterModule } from '@angular/router';
             <h2 class="text-lg font-semibold">Invoice Settings</h2>
             <p>Configure invoice rates and settings</p>
           </a>
+          <a routerLink="payroll" class="block p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg border">
+            <h2 class="text-lg font-semibold">Payroll</h2>
+            <p>Manage employee payroll and salaries</p>
+          </a>
         </div>
       </div>
     </div>
