@@ -257,7 +257,7 @@ export class GrnComponent implements OnInit {
               orgId,
               siteId: this.selectedPO.siteId,
               materialId: grnItem.materialId,
-              transactionType: 'Issue',
+              transactionType: 'Adjustment',
               quantity: grnItem.quantityReceived,
               previousStock: 0, // TODO: Get actual stock from inventory
               newStock: grnItem.quantityReceived, // TODO: Calculate actual new stock
