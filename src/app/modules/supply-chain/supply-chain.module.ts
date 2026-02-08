@@ -24,6 +24,10 @@ const routes: Routes = [
         path: 'purchase-orders',
         loadComponent: () => import('./purchase-orders/purchase-orders.component').then(m => m.PurchaseOrdersComponent)
     },
+    {
+        path: 'grn',
+        loadComponent: () => import('./grn/grn.component').then(m => m.GrnComponent)
+    },
 ];
 
 @NgModule({
