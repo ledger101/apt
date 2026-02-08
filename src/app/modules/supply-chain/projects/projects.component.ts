@@ -74,16 +74,6 @@ export class ProjectsComponent implements OnInit {
     this.isEditing = true;
     this.editingProjectId = project.projectId;
     
-    const startDateStr = project.startDate instanceof Date 
-      ? project.startDate.toISOString().split('T')[0]
-      : (project.startDate as any)?.toDate ? (project.startDate as any).toDate().toISOString().split('T')[0] : '';
-    
-    const endDateStr = project.expectedEndDate 
-      ? (project.expectedEndDate instanceof Date 
-          ? project.expectedEndDate.toISOString().split('T')[0]
-          : (project.expectedEndDate as any)?.toDate ? (project.expectedEndDate as any).toDate().toISOString().split('T')[0] : '')
-      : '';
-    
     this.projectForm.patchValue({
       projectName: project.projectName,
       projectCode: project.projectCode,
@@ -91,14 +81,25 @@ export class ProjectsComponent implements OnInit {
       physicalAddress: project.physicalAddress || '',
       siteManager: project.siteManager || '',
       siteManagerContact: project.siteManagerContact || '',
-      startDate: startDateStr,
-      expectedEndDate: endDateStr,
+      startDate: this.convertToDateString(project.startDate),
+      expectedEndDate: this.convertToDateString(project.expectedEndDate),
       status: project.status,
       totalBudget: project.totalBudget || 0,
       budgetConsumed: project.budgetConsumed || 0,
       costCenterCode: project.costCenterCode || ''
     });
     this.showForm = true;
+  }
+
+  private convertToDateString(date: any): string {
+    if (!date) return '';
+    if (date instanceof Date) {
+      return date.toISOString().split('T')[0];
+    }
+    if (date?.toDate) {
+      return date.toDate().toISOString().split('T')[0];
+    }
+    return '';
   }
 
   cancelEdit() {
