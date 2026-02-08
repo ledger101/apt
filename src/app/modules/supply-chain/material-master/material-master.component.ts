@@ -174,6 +174,6 @@ export class MaterialMasterComponent implements OnInit {
   }
 
   navigateToDashboard(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/supply-chain/dashboard']);
   }
 }

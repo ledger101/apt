@@ -1,4 +1,4 @@
-# Supply Chain Management Module - Implementation Plan
+pply Chain Management Module - Implementation Plan
 
 ## Executive Summary
 

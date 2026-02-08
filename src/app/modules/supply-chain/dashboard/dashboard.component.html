@@ -1,0 +1,220 @@
+
+<div class="container mx-auto px-4 py-6">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Supply Chain Management</h1>
+    <p class="text-gray-600">Manage materials, suppliers, purchase orders, and inventory</p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-12">
+    <p class="text-gray-600">Loading dashboard...</p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!isLoading">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Materials</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.materials }}</p>
+          </div>
+          <div class="text-4xl">📦</div>
+        </div>
+        <div class="mt-4">
+          <span class="text-red-600 text-sm" *ngIf="stats.lowStockItems > 0">
+            {{ stats.lowStockItems }} low stock
+          </span>
+          <span class="text-green-600 text-sm" *ngIf="stats.lowStockItems === 0">
+            All in stock
+          </span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Suppliers</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.suppliers }}</p>
+          </div>
+          <div class="text-4xl">🏢</div>
+        </div>
+        <div class="mt-4">
+          <span class="text-gray-500 text-sm">Active vendors</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Requisitions</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.requisitions }}</p>
+          </div>
+          <div class="text-4xl">📋</div>
+        </div>
+        <div class="mt-4">
+          <span class="text-blue-600 text-sm">
+            {{ stats.pendingRequisitions }} pending
+          </span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm">Purchase Orders</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.purchaseOrders }}</p>
+          </div>
+          <div class="text-4xl">🛒</div>
+        </div>
+        <div class="mt-4">
+          <span class="text-orange-600 text-sm">
+            {{ stats.openPOs }} open
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <button
+          *ngFor="let link of quickLinks"
+          (click)="navigateTo(link.route)"
+          class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow text-left"
+        >
+          <div class="flex items-start">
+            <div class="text-3xl mr-3">{{ link.icon }}</div>
+            <div>
+              <h3 class="font-semibold text-gray-900 mb-1">{{ link.title }}</h3>
+              <p class="text-sm text-gray-600">{{ link.description }}</p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Two-Column Layout for Recent Activity and Alerts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Recent Requisitions -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-900">Recent Requisitions</h2>
+          <a [routerLink]="['/supply-chain/requisition-workflow']" class="text-blue-600 hover:text-blue-800 text-sm">
+            View All →
+          </a>
+        </div>
+
+        <div *ngIf="recentRequisitions.length === 0" class="text-center py-8 text-gray-500">
+          No requisitions yet
+        </div>
+
+        <div *ngIf="recentRequisitions.length > 0" class="space-y-3">
+          <div
+            *ngFor="let req of recentRequisitions"
+            class="border-l-4 pl-4 py-2"
+            [ngClass]="{
+              'border-blue-500': req.status === 'Submitted',
+              'border-green-500': req.status === 'Approved',
+              'border-gray-300': req.status === 'Draft',
+              'border-red-500': req.status === 'Rejected'
+            }"
+          >
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">{{ req.title }}</p>
+                <p class="text-sm text-gray-600">{{ req.description }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ formatDate(req.createdAt) }}</p>
+              </div>
+              <span
+                class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2"
+                [ngClass]="getStatusColor(req.status)"
+              >
+                {{ req.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Purchase Orders -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-900">Recent Purchase Orders</h2>
+          <a [routerLink]="['/supply-chain/purchase-orders']" class="text-blue-600 hover:text-blue-800 text-sm">
+            View All →
+          </a>
+        </div>
+
+        <div *ngIf="recentPOs.length === 0" class="text-center py-8 text-gray-500">
+          No purchase orders yet
+        </div>
+
+        <div *ngIf="recentPOs.length > 0" class="space-y-3">
+          <div
+            *ngFor="let po of recentPOs"
+            class="border-l-4 pl-4 py-2"
+            [ngClass]="{
+              'border-indigo-500': po.status === 'Sent',
+              'border-purple-500': po.status === 'Acknowledged',
+              'border-yellow-500': po.status === 'Receiving',
+              'border-gray-300': po.status === 'Draft' || po.status === 'Closed'
+            }"
+          >
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">{{ po.poNumber }}</p>
+                <p class="text-sm text-gray-600">{{ po.supplierName }}</p>
+                <p class="text-sm text-gray-900 font-medium mt-1">{{ formatCurrency(po.totalAmount) }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ formatDate(po.createdAt) }}</p>
+              </div>
+              <span
+                class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2"
+                [ngClass]="getStatusColor(po.status)"
+              >
+                {{ po.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    <div *ngIf="lowStockMaterials.length > 0" class="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+      <div class="flex items-start">
+        <div class="text-3xl mr-4">⚠️</div>
+        <div class="flex-1">
+          <h2 class="text-xl font-semibold text-red-900 mb-2">Low Stock Alert</h2>
+          <p class="text-red-700 mb-4">The following materials are at or below minimum stock levels:</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div
+              *ngFor="let material of lowStockMaterials"
+              class="bg-white rounded-lg p-3 border border-red-200"
+            >
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="font-medium text-gray-900">{{ material.name }}</p>
+                  <p class="text-sm text-gray-600">{{ material.code }}</p>
+                </div>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                  {{ material.currentStock || 0 }} {{ material.unit }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Min: {{ material.minStockLevel }} {{ material.unit }}</p>
+            </div>
+          </div>
+          <button
+            (click)="navigateTo('/supply-chain/material-master')"
+            class="mt-4 text-red-700 hover:text-red-900 font-medium text-sm"
+          >
+            View All Materials →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,349 @@
+
+<div class="container mx-auto px-4 py-6">
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Material Disbursements</h1>
+      <p class="text-gray-600">Issue materials from warehouse to projects</p>
+    </div>
+    <button
+      (click)="showAddForm()"
+      class="btn btn-primary"
+    >
+      New Disbursement
+    </button>
+  </div>
+
+  <!-- Disbursement Form -->
+  <div *ngIf="showForm" class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">New Disbursement</h2>
+
+    <form [formGroup]="disbursementForm" class="space-y-6">
+      <!-- Header Section -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Project -->
+        <div>
+          <label for="projectId" class="block text-sm font-medium text-gray-700 mb-1">
+            Project *
+          </label>
+          <select
+            id="projectId"
+            formControlName="projectId"
+            (change)="onProjectChange()"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select Project</option>
+            <option *ngFor="let project of projects" [value]="project.projectId">
+              {{ project.projectName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Requisition (Optional) -->
+        <div>
+          <label for="requisitionId" class="block text-sm font-medium text-gray-700 mb-1">
+            Requisition (Optional)
+          </label>
+          <select
+            id="requisitionId"
+            formControlName="requisitionId"
+            (change)="onRequisitionChange()"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [disabled]="!disbursementForm.get('projectId')?.value"
+          >
+            <option value="">No Requisition</option>
+            <option *ngFor="let req of getApprovedRequisitionsForProject()" [value]="req.requisitionId">
+              {{ req.title }} ({{ formatDate(req.requiredDate) }})
+            </option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Select to auto-fill items from approved requisition</p>
+        </div>
+
+        <!-- Date Issued -->
+        <div>
+          <label for="dateIssued" class="block text-sm font-medium text-gray-700 mb-1">
+            Date Issued *
+          </label>
+          <input
+            type="date"
+            id="dateIssued"
+            formControlName="dateIssued"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <!-- Recipient and Purpose Section -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Received By -->
+        <div>
+          <label for="receivedBy" class="block text-sm font-medium text-gray-700 mb-1">
+            Received By *
+          </label>
+          <input
+            type="text"
+            id="receivedBy"
+            formControlName="receivedBy"
+            placeholder="Name of person receiving materials"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <!-- Work Order Number -->
+        <div>
+          <label for="workOrderNumber" class="block text-sm font-medium text-gray-700 mb-1">
+            Work Order Number
+          </label>
+          <input
+            type="text"
+            id="workOrderNumber"
+            formControlName="workOrderNumber"
+            placeholder="Optional work order reference"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <!-- Purpose -->
+      <div>
+        <label for="purpose" class="block text-sm font-medium text-gray-700 mb-1">
+          Purpose / Activity Description *
+        </label>
+        <textarea
+          id="purpose"
+          formControlName="purpose"
+          rows="2"
+          placeholder="Describe the purpose or activity for which materials are being issued"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <!-- Line Items -->
+      <div>
+        <div class="flex justify-between items-center mb-3">
+          <label class="block text-sm font-medium text-gray-700">
+            Materials to Issue *
+          </label>
+          <button
+            type="button"
+            (click)="addItem()"
+            class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            [disabled]="selectedRequisition !== null"
+          >
+            + Add Item
+          </button>
+        </div>
+
+        <div class="line-items-container">
+          <table class="line-items-table">
+            <thead>
+              <tr>
+                <th style="width: 5%">#</th>
+                <th style="width: 35%">Material</th>
+                <th style="width: 15%">Available</th>
+                <th style="width: 15%">Qty to Issue</th>
+                <th style="width: 15%">Unit Cost</th>
+                <th style="width: 15%">Total</th>
+                <th style="width: 5%"></th>
+              </tr>
+            </thead>
+            <tbody formArrayName="items">
+              <tr *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+                <td class="text-gray-500">{{ i + 1 }}</td>
+                
+                <!-- Material -->
+                <td>
+                  <select
+                    formControlName="materialId"
+                    (change)="onMaterialChange(i)"
+                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Select Material</option>
+                    <option *ngFor="let material of materials" [value]="material.materialId">
+                      {{ material.code }} - {{ material.name }}
+                    </option>
+                  </select>
+                </td>
+
+                <!-- Available Stock -->
+                <td>
+                  <div *ngIf="item.get('materialId')?.value" class="text-sm">
+                    <span [ngClass]="{
+                      'text-green-600 font-semibold': getAvailableStock(item.get('materialId')?.value) > 0 && !isLowStock(item.get('materialId')?.value),
+                      'text-yellow-600 font-semibold': isLowStock(item.get('materialId')?.value) && getAvailableStock(item.get('materialId')?.value) > 0,
+                      'text-red-600 font-semibold': getAvailableStock(item.get('materialId')?.value) === 0
+                    }">
+                      {{ getAvailableStock(item.get('materialId')?.value) }} {{ getMaterial(item.get('materialId')?.value)?.unit }}
+                    </span>
+                    <span *ngIf="isLowStock(item.get('materialId')?.value)" class="text-xs text-yellow-600 block">
+                      ⚠ Low stock
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Quantity to Issue -->
+                <td>
+                  <input
+                    type="number"
+                    formControlName="quantityIssued"
+                    min="0.01"
+                    step="0.01"
+                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    [ngClass]="{
+                      'border-red-500': !isStockSufficient(i) && item.get('quantityIssued')?.value > 0
+                    }"
+                  />
+                  <span *ngIf="!isStockSufficient(i) && item.get('quantityIssued')?.value > 0" 
+                        class="text-xs text-red-600">
+                    Exceeds stock!
+                  </span>
+                </td>
+
+                <!-- Unit Cost -->
+                <td>
+                  <input
+                    type="number"
+                    formControlName="unitCost"
+                    min="0"
+                    step="0.01"
+                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </td>
+
+                <!-- Total -->
+                <td class="text-right font-semibold">
+                  {{ formatCurrency(calculateItemTotal(i)) }}
+                </td>
+
+                <!-- Actions -->
+                <td class="text-center">
+                  <button
+                    type="button"
+                    (click)="removeItem(i)"
+                    [disabled]="items.length === 1 || selectedRequisition !== null"
+                    class="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    title="Remove item"
+                  >
+                    ✕
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="items.length === 0">
+                <td colspan="7" class="text-center py-4 text-gray-500">
+                  No items added
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" class="text-right font-semibold py-3 px-4">
+                  Total Cost:
+                </td>
+                <td class="text-right font-bold text-lg py-3">
+                  {{ formatCurrency(calculateTotalCost()) }}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
+          Additional Notes
+        </label>
+        <textarea
+          id="notes"
+          formControlName="notes"
+          rows="2"
+          placeholder="Optional additional notes"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex justify-end space-x-3 pt-4 border-t">
+        <button
+          type="button"
+          (click)="hideForm()"
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          [disabled]="isLoading"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="saveDisbursement()"
+          [disabled]="!canSave() || isLoading"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          {{ isLoading ? 'Creating...' : 'Create Disbursement' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Disbursements List -->
+  <div class="data-table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Disbursement #</th>
+          <th>Project</th>
+          <th>Date Issued</th>
+          <th>Received By</th>
+          <th>Purpose</th>
+          <th class="numeric">Total Cost</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let disbursement of disbursements">
+          <td class="font-medium text-blue-600">
+            {{ disbursement.disbursementNumber }}
+          </td>
+          <td>{{ getProjectName(disbursement.projectId) }}</td>
+          <td>{{ formatDate(disbursement.dateIssued) }}</td>
+          <td>{{ disbursement.receivedBy }}</td>
+          <td class="max-w-xs truncate" [title]="disbursement.purpose">
+            {{ disbursement.purpose }}
+          </td>
+          <td class="numeric font-semibold">
+            {{ formatCurrency(disbursement.totalCost) }}
+          </td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(disbursement.status)">
+              {{ disbursement.status }}
+            </span>
+          </td>
+          <td>
+            <div class="table-actions">
+              <button
+                (click)="viewDisbursement(disbursement)"
+                class="view"
+                title="View details"
+              >
+                View
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="disbursements.length === 0 && !isLoading">
+          <td colspan="8" class="table-empty">
+            No disbursements found. Click "New Disbursement" to create one.
+          </td>
+        </tr>
+        <tr *ngIf="isLoading">
+          <td colspan="8" class="table-empty">
+            <div class="flex items-center justify-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span class="ml-3">Loading disbursements...</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
