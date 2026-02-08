@@ -38,5 +38,13 @@ export type {
   InvoiceShift,
   InvoiceActivity,
   InvoiceConfig,
+  Project,
+  Supplier,
+  PurchaseOrder,
+  PurchaseOrderItem,
+  GoodsReceivedNote,
+  GoodsReceivedItem,
+  Disbursement,
+  DisbursementItem,
 } from './pumping-data.model';
 

@@ -477,3 +477,164 @@ export interface InvoiceConfig {
   updatedAt: Date;
   updatedBy: string;
 }
+
+// Supply Chain Models
+
+export interface Project {
+  projectId: string;
+  orgId: string;
+  projectName: string;
+  projectCode: string; // Short code for easy reference
+  description?: string;
+  physicalAddress?: string;
+  siteManager?: string;
+  siteManagerContact?: string;
+  startDate: Timestamp;
+  expectedEndDate?: Timestamp;
+  status: 'Active' | 'Completed' | 'On Hold' | 'Cancelled';
+  totalBudget?: number;
+  budgetConsumed?: number;
+  costCenterCode?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Supplier {
+  supplierId: string;
+  orgId: string;
+  companyName: string;
+  registrationNumber?: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  physicalAddress?: string;
+  billingAddress?: string;
+  taxId?: string;
+  paymentTerms: string; // e.g., 'Net 30', 'Net 60', 'COD'
+  averageLeadTimeDays?: number;
+  creditLimit?: number;
+  performanceRating?: number; // 1-5 stars
+  isActive: boolean;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface PurchaseOrder {
+  poId: string;
+  orgId: string;
+  poNumber: string; // Auto-generated user-friendly number
+  supplierId: string;
+  supplierName: string;
+  requisitionIds: string[]; // Can be linked to multiple requisitions
+  projectId: string;
+  siteId: string;
+  expectedDeliveryDate: Timestamp;
+  status: 'Draft' | 'Sent' | 'Acknowledged' | 'Receiving' | 'Closed' | 'Cancelled';
+  items: PurchaseOrderItem[];
+  subtotal: number;
+  taxAmount?: number;
+  shippingCost?: number;
+  discount?: number;
+  totalAmount: number;
+  currency: string;
+  paymentTerms: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  approvedBy?: string;
+  approvedAt?: Timestamp;
+  sentAt?: Timestamp;
+}
+
+export interface PurchaseOrderItem {
+  lineNumber: number;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  description: string;
+  quantityOrdered: number;
+  unit: string;
+  unitPrice: number;
+  lineTotal: number;
+  taxAmount?: number;
+  quantityReceived: number;
+  quantityOutstanding: number;
+}
+
+export interface GoodsReceivedNote {
+  grnId: string;
+  orgId: string;
+  grnNumber: string; // Auto-generated
+  poId: string;
+  poNumber: string;
+  supplierId: string;
+  supplierName: string;
+  projectId: string;
+  siteId: string;
+  dateReceived: Timestamp;
+  receivedBy: string;
+  deliveryNoteRef?: string;
+  invoiceRef?: string;
+  qualityCheckStatus: 'Passed' | 'Failed' | 'Partial';
+  items: GoodsReceivedItem[];
+  totalValue: number;
+  notes?: string;
+  discrepancyNotes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface GoodsReceivedItem {
+  lineNumber: number;
+  poLineNumber: number;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  quantityOrdered: number;
+  quantityReceived: number;
+  quantityRejected: number;
+  unit: string;
+  unitCost: number;
+  lineTotal: number;
+  storageLocation?: string;
+  conditionNotes?: string;
+}
+
+export interface Disbursement {
+  disbursementId: string;
+  orgId: string;
+  disbursementNumber: string; // Auto-generated
+  projectId: string;
+  siteId: string;
+  requisitionId?: string;
+  dateIssued: Timestamp;
+  issuedBy: string;
+  receivedBy: string;
+  purpose: string;
+  workOrderNumber?: string;
+  status: 'Issued' | 'Partially Returned' | 'Returned' | 'Closed';
+  items: DisbursementItem[];
+  totalCost: number;
+  costCenter?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface DisbursementItem {
+  lineNumber: number;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  quantityIssued: number;
+  unit: string;
+  unitCost: number;
+  totalCost: number;
+  quantityReturned: number;
+}
