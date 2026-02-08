@@ -429,10 +429,13 @@ export interface Supplier {
 }
 
 export interface PurchaseOrderItem {
+  lineNumber?: number;
   materialId: string;
   materialCode: string;
   materialName: string;
   quantity: number;
+  quantityOrdered: number; // Alias for quantity
+  quantityReceived?: number;
   unit: string;
   unitPrice: number;
   totalPrice: number;
@@ -445,6 +448,7 @@ export interface PurchaseOrder {
   poId: string;
   orgId: string;
   supplierId: string;
+  supplierName?: string; // Denormalized for display
   projectId: string;
   siteId?: string;
   poNumber: string; // Auto-generated (e.g., PO-2024-001)
@@ -461,22 +465,34 @@ export interface PurchaseOrder {
   shippingCost?: number;
   discount?: number;
   totalValue: number;
+  totalAmount?: number; // Alias for totalValue
   requisitionId?: string; // Reference to originating requisition
+  requisitionIds?: string[]; // Alternative: array of requisition IDs
   notes?: string;
   deliveryInstructions?: string;
+  sentAt?: Timestamp; // When the PO was sent to supplier
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 export interface GoodsReceivedItem {
+  lineNumber?: number;
   poLineId?: string; // Reference to PurchaseOrderItem
+  poLineNumber?: number; // Line number from PO
   materialId: string;
   materialCode: string;
   materialName: string;
   orderedQuantity: number;
+  quantityOrdered?: number; // Alias for orderedQuantity
   receivedQuantity: number;
+  quantityReceived?: number; // Alias for receivedQuantity
+  quantityRejected?: number;
   unit: string;
+  unitCost?: number;
+  lineTotal?: number;
+  storageLocation?: string;
+  conditionNotes?: string;
   qualityStatus: 'Passed' | 'Failed' | 'Pending';
   discrepancyNotes?: string;
 }
@@ -485,6 +501,10 @@ export interface GoodsReceivedNote {
   grnId: string;
   orgId: string;
   poId: string; // Purchase order reference
+  supplierId?: string; // Denormalized from PO
+  poNumber?: string; // Denormalized for display
+  supplierName?: string; // Denormalized for display
+  projectId?: string; // Denormalized from PO
   grnNumber: string; // Auto-generated (e.g., GRN-2024-001)
   dateReceived: Timestamp;
   receivedBy: string; // employee ID
@@ -493,6 +513,7 @@ export interface GoodsReceivedNote {
   qualityCheckStatus: 'Passed' | 'Failed' | 'Partial';
   discrepancyNotes?: string;
   items: GoodsReceivedItem[];
+  totalValue?: number;
   notes?: string;
   createdBy: string;
   createdAt: Timestamp;
@@ -500,13 +521,18 @@ export interface GoodsReceivedNote {
 }
 
 export interface DisbursementItem {
+  lineNumber?: number;
   materialId: string;
   materialCode: string;
   materialName: string;
   quantity: number; // Available quantity
   unit: string;
+  unitCost?: number;
   issuedQuantity: number;
+  quantityIssued?: number; // Alias for issuedQuantity
   returnedQuantity?: number;
+  quantityReturned?: number; // Alias for returnedQuantity
+  totalCost?: number;
   purpose: string;
   notes?: string;
 }
@@ -525,6 +551,7 @@ export interface Disbursement {
   workOrderNumber?: string;
   status: 'Issued' | 'Partially Returned' | 'Returned' | 'Closed';
   items: DisbursementItem[];
+  totalCost?: number;
   notes?: string;
   createdBy: string;
   createdAt: Timestamp;
