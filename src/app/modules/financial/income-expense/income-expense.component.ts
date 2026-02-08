@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { FirestoreService } from '../../../services/firestore.service';
+import { AuthService } from '../../../services/auth.service';
 import { Income, Expense } from '../../../models/pumping-data.model';
 
 @Component({
@@ -50,6 +51,7 @@ export class IncomeExpenseComponent implements OnInit {
 
   constructor(
     private firestoreService: FirestoreService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
@@ -180,8 +182,12 @@ export class IncomeExpenseComponent implements OnInit {
   async saveIncome() {
     try {
       this.loading = true;
+      const userProfile = this.authService.getCurrentUserProfile();
+      const orgId = userProfile?.orgId || 'default-org';
+      const userId = userProfile?.uid || 'unknown-user';
+      
       const incomeData: Omit<Income, 'incomeId'> = {
-        orgId: 'default-org', // TODO: Get from auth service
+        orgId: orgId,
         source: this.incomeForm.source!,
         amount: this.incomeForm.amount!,
         currency: this.incomeForm.currency || 'USD',
@@ -191,7 +197,7 @@ export class IncomeExpenseComponent implements OnInit {
         category: this.incomeForm.category!,
         description: this.incomeForm.description,
         reference: this.incomeForm.reference,
-        createdBy: 'current-user', // TODO: Get from auth service
+        createdBy: userId,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -248,8 +254,12 @@ export class IncomeExpenseComponent implements OnInit {
   async saveExpense() {
     try {
       this.loading = true;
+      const userProfile = this.authService.getCurrentUserProfile();
+      const orgId = userProfile?.orgId || 'default-org';
+      const userId = userProfile?.uid || 'unknown-user';
+      
       const expenseData: Omit<Expense, 'expenseId'> = {
-        orgId: 'default-org', // TODO: Get from auth service
+        orgId: orgId,
         category: this.expenseForm.category!,
         amount: this.expenseForm.amount!,
         currency: this.expenseForm.currency || 'USD',
@@ -261,7 +271,7 @@ export class IncomeExpenseComponent implements OnInit {
         receiptRef: this.expenseForm.receiptRef,
         approvedBy: this.expenseForm.approvedBy,
         status: this.expenseForm.status || 'Pending',
-        createdBy: 'current-user', // TODO: Get from auth service
+        createdBy: userId,
         createdAt: new Date(),
         updatedAt: new Date()
       };
