@@ -15,7 +15,7 @@ import {
   orderBy,
   collectionGroup
 } from '@angular/fire/firestore';
-import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob, Invoice, InvoiceConfig } from '../models/pumping-data.model';
+import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob, Invoice, InvoiceConfig, Income, Expense, Employee, PayPeriod, SalaryStructure, Timesheet, Deduction, Payslip, EmployeeDeduction } from '../models/pumping-data.model';
 
 @Injectable({
   providedIn: 'root'
@@ -903,6 +903,416 @@ export class FirestoreService {
       }
     } catch (error) {
       console.error('Error getting invoice config:', error);
+      throw error;
+    }
+  }
+
+  // ==================== INCOME & EXPENSE ====================
+
+  /**
+   * Get all incomes for an organization
+   */
+  async getIncomes(orgId?: string): Promise<Income[]> {
+    try {
+      const incomesCollection = collection(this.firestore, 'incomes');
+      const q = orgId 
+        ? query(incomesCollection, where('orgId', '==', orgId), orderBy('incomeDate', 'desc'))
+        : query(incomesCollection, orderBy('incomeDate', 'desc'));
+
+      const querySnapshot = await getDocs(q);
+      const incomes: Income[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        incomes.push({
+          incomeId: doc.id,
+          ...data,
+          incomeDate: data['incomeDate']?.toDate() || new Date(),
+          createdAt: data['createdAt']?.toDate() || new Date(),
+          updatedAt: data['updatedAt']?.toDate() || new Date()
+        } as Income);
+      });
+
+      console.log(`Retrieved ${incomes.length} incomes`);
+      return incomes;
+    } catch (error) {
+      console.error('Error getting incomes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific income by ID
+   */
+  async getIncome(incomeId: string): Promise<Income | null> {
+    try {
+      const incomeDoc = doc(this.firestore, 'incomes', incomeId);
+      const docSnap = await getDoc(incomeDoc);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          incomeId: docSnap.id,
+          ...data,
+          incomeDate: data['incomeDate']?.toDate() || new Date(),
+          createdAt: data['createdAt']?.toDate() || new Date(),
+          updatedAt: data['updatedAt']?.toDate() || new Date()
+        } as Income;
+      } else {
+        console.log('No such income!');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting income:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new income
+   */
+  async createIncome(income: Omit<Income, 'incomeId'>): Promise<string> {
+    try {
+      const incomesCollection = collection(this.firestore, 'incomes');
+      const incomeData = {
+        ...income,
+        incomeDate: income.incomeDate instanceof Date ? Timestamp.fromDate(income.incomeDate) : income.incomeDate,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      const docRef = await addDoc(incomesCollection, incomeData);
+      console.log('Income created successfully:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating income:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an income
+   */
+  async updateIncome(incomeId: string, updates: Partial<Income>): Promise<void> {
+    try {
+      const incomeDoc = doc(this.firestore, 'incomes', incomeId);
+      const updateData: any = { ...updates };
+
+      if (updateData.incomeDate && updateData.incomeDate instanceof Date) {
+        updateData.incomeDate = Timestamp.fromDate(updateData.incomeDate);
+      }
+      updateData.updatedAt = Timestamp.fromDate(new Date());
+
+      await updateDoc(incomeDoc, updateData);
+      console.log('Income updated successfully:', incomeId);
+    } catch (error) {
+      console.error('Error updating income:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an income
+   */
+  async deleteIncome(incomeId: string): Promise<void> {
+    try {
+      const incomeDoc = doc(this.firestore, 'incomes', incomeId);
+      await deleteDoc(incomeDoc);
+      console.log('Income deleted successfully:', incomeId);
+    } catch (error) {
+      console.error('Error deleting income:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all expenses for an organization
+   */
+  async getExpenses(orgId?: string): Promise<Expense[]> {
+    try {
+      const expensesCollection = collection(this.firestore, 'expenses');
+      const q = orgId 
+        ? query(expensesCollection, where('orgId', '==', orgId), orderBy('expenseDate', 'desc'))
+        : query(expensesCollection, orderBy('expenseDate', 'desc'));
+
+      const querySnapshot = await getDocs(q);
+      const expenses: Expense[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        expenses.push({
+          expenseId: doc.id,
+          ...data,
+          expenseDate: data['expenseDate']?.toDate() || new Date(),
+          createdAt: data['createdAt']?.toDate() || new Date(),
+          updatedAt: data['updatedAt']?.toDate() || new Date()
+        } as Expense);
+      });
+
+      console.log(`Retrieved ${expenses.length} expenses`);
+      return expenses;
+    } catch (error) {
+      console.error('Error getting expenses:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific expense by ID
+   */
+  async getExpense(expenseId: string): Promise<Expense | null> {
+    try {
+      const expenseDoc = doc(this.firestore, 'expenses', expenseId);
+      const docSnap = await getDoc(expenseDoc);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          expenseId: docSnap.id,
+          ...data,
+          expenseDate: data['expenseDate']?.toDate() || new Date(),
+          createdAt: data['createdAt']?.toDate() || new Date(),
+          updatedAt: data['updatedAt']?.toDate() || new Date()
+        } as Expense;
+      } else {
+        console.log('No such expense!');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting expense:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new expense
+   */
+  async createExpense(expense: Omit<Expense, 'expenseId'>): Promise<string> {
+    try {
+      const expensesCollection = collection(this.firestore, 'expenses');
+      const expenseData = {
+        ...expense,
+        expenseDate: expense.expenseDate instanceof Date ? Timestamp.fromDate(expense.expenseDate) : expense.expenseDate,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      const docRef = await addDoc(expensesCollection, expenseData);
+      console.log('Expense created successfully:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating expense:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an expense
+   */
+  async updateExpense(expenseId: string, updates: Partial<Expense>): Promise<void> {
+    try {
+      const expenseDoc = doc(this.firestore, 'expenses', expenseId);
+      const updateData: any = { ...updates };
+
+      if (updateData.expenseDate && updateData.expenseDate instanceof Date) {
+        updateData.expenseDate = Timestamp.fromDate(updateData.expenseDate);
+      }
+      updateData.updatedAt = Timestamp.fromDate(new Date());
+
+      await updateDoc(expenseDoc, updateData);
+      console.log('Expense updated successfully:', expenseId);
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an expense
+   */
+  async deleteExpense(expenseId: string): Promise<void> {
+    try {
+      const expenseDoc = doc(this.firestore, 'expenses', expenseId);
+      await deleteDoc(expenseDoc);
+      console.log('Expense deleted successfully:', expenseId);
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      throw error;
+    }
+  }
+
+  // ==================== PAYROLL - EMPLOYEES ====================
+
+  /**
+   * Get all employees for an organization
+   */
+  async getEmployees(orgId?: string): Promise<Employee[]> {
+    try {
+      const employeesCollection = collection(this.firestore, 'employees');
+      const q = orgId 
+        ? query(employeesCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'))
+        : query(employeesCollection, orderBy('createdAt', 'desc'));
+
+      const querySnapshot = await getDocs(q);
+      const employees: Employee[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        employees.push({
+          employeeId: doc.id,
+          ...data
+        } as Employee);
+      });
+
+      console.log(`Retrieved ${employees.length} employees`);
+      return employees;
+    } catch (error) {
+      console.error('Error getting employees:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific employee by ID
+   */
+  async getEmployee(employeeId: string): Promise<Employee | null> {
+    try {
+      const employeeDoc = doc(this.firestore, 'employees', employeeId);
+      const docSnap = await getDoc(employeeDoc);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          employeeId: docSnap.id,
+          ...data
+        } as Employee;
+      } else {
+        console.log('No such employee!');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting employee:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new employee
+   */
+  async createEmployee(employee: Omit<Employee, 'employeeId'>): Promise<string> {
+    try {
+      const employeesCollection = collection(this.firestore, 'employees');
+      const employeeData = {
+        ...employee,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      const docRef = await addDoc(employeesCollection, employeeData);
+      console.log('Employee created successfully:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an employee
+   */
+  async updateEmployee(employeeId: string, updates: Partial<Employee>): Promise<void> {
+    try {
+      const employeeDoc = doc(this.firestore, 'employees', employeeId);
+      const updateData: any = { ...updates };
+      updateData.updatedAt = Timestamp.fromDate(new Date());
+
+      await updateDoc(employeeDoc, updateData);
+      console.log('Employee updated successfully:', employeeId);
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an employee
+   */
+  async deleteEmployee(employeeId: string): Promise<void> {
+    try {
+      const employeeDoc = doc(this.firestore, 'employees', employeeId);
+      await deleteDoc(employeeDoc);
+      console.log('Employee deleted successfully:', employeeId);
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      throw error;
+    }
+  }
+
+  // ==================== PAYROLL - PAY PERIODS ====================
+
+  /**
+   * Get all pay periods for an organization
+   */
+  async getPayPeriods(orgId?: string): Promise<PayPeriod[]> {
+    try {
+      const payPeriodsCollection = collection(this.firestore, 'pay-periods');
+      const q = orgId 
+        ? query(payPeriodsCollection, where('orgId', '==', orgId), orderBy('startDate', 'desc'))
+        : query(payPeriodsCollection, orderBy('startDate', 'desc'));
+
+      const querySnapshot = await getDocs(q);
+      const payPeriods: PayPeriod[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        payPeriods.push({
+          payPeriodId: doc.id,
+          ...data
+        } as PayPeriod);
+      });
+
+      console.log(`Retrieved ${payPeriods.length} pay periods`);
+      return payPeriods;
+    } catch (error) {
+      console.error('Error getting pay periods:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new pay period
+   */
+  async createPayPeriod(payPeriod: Omit<PayPeriod, 'payPeriodId'>): Promise<string> {
+    try {
+      const payPeriodsCollection = collection(this.firestore, 'pay-periods');
+      const payPeriodData = {
+        ...payPeriod,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      const docRef = await addDoc(payPeriodsCollection, payPeriodData);
+      console.log('Pay period created successfully:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating pay period:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a pay period
+   */
+  async updatePayPeriod(payPeriodId: string, updates: Partial<PayPeriod>): Promise<void> {
+    try {
+      const payPeriodDoc = doc(this.firestore, 'pay-periods', payPeriodId);
+      const updateData: any = { ...updates };
+      updateData.updatedAt = Timestamp.fromDate(new Date());
+
+      await updateDoc(payPeriodDoc, updateData);
+      console.log('Pay period updated successfully:', payPeriodId);
+    } catch (error) {
+      console.error('Error updating pay period:', error);
       throw error;
     }
   }
