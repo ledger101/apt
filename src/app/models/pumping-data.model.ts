@@ -477,3 +477,237 @@ export interface InvoiceConfig {
   updatedAt: Date;
   updatedBy: string;
 }
+
+// Income & Expense Models
+export interface Income {
+  incomeId: string;
+  orgId: string;
+  source: string; // e.g., 'Invoice', 'Other'
+  amount: number;
+  currency: string;
+  incomeDate: Date;
+  category: string;
+  description?: string;
+  reference?: string; // Invoice number, receipt number
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Expense {
+  expenseId: string;
+  orgId: string;
+  category: string; // e.g., 'Fuel', 'Materials', 'Salaries'
+  amount: number;
+  currency: string;
+  expenseDate: Date;
+  description?: string;
+  payee?: string; // Vendor or employee name
+  receiptRef?: string;
+  approvedBy?: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Payroll Models
+export interface Employee {
+  employeeId: string;
+  orgId: string;
+  
+  // Personal Information
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  address?: {
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country: string;
+  };
+  
+  // Employment Information
+  employeeNumber: string; // Unique employee number
+  position: string;
+  department: string;
+  hireDate: Timestamp;
+  terminationDate?: Timestamp;
+  employmentStatus: 'Active' | 'Inactive' | 'OnLeave' | 'Terminated';
+  
+  // Compensation
+  salaryStructureId: string;
+  hourlyRate?: number;
+  bankAccount?: {
+    bankName: string;
+    accountNumber: string;
+    accountType: 'Checking' | 'Savings';
+  };
+  
+  // Tax Information
+  taxId?: string;
+  taxNumber?: string;
+  
+  // Audit
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface PayPeriod {
+  payPeriodId: string;
+  orgId: string;
+  
+  periodType: 'Weekly' | 'BiWeekly' | 'Monthly';
+  startDate: Timestamp;
+  endDate: Timestamp;
+  status: 'Open' | 'Processing' | 'Closed';
+  
+  // Summary
+  totalEmployees: number;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalNetPay: number;
+  
+  // Audit
+  processedBy: string;
+  processedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface SalaryStructure {
+  structureId: string;
+  orgId: string;
+  
+  name: string; // e.g., "Standard Full-Time", "Hourly Worker"
+  type: 'Salaried' | 'Hourly';
+  
+  // Compensation Details
+  baseSalary?: number; // Monthly base salary
+  hourlyRate?: number; // Hourly rate
+  overtimeRate?: number; // Overtime multiplier (e.g., 1.5x)
+  holidayRate?: number; // Holiday pay multiplier
+  sickRate?: number; // Sick leave pay multiplier
+  
+  // Allowances
+  housingAllowance?: number;
+  transportAllowance?: number;
+  medicalAllowance?: number;
+  otherAllowances?: number;
+  
+  // Deductions
+  pensionRate?: number; // Percentage
+  taxRate?: number; // Percentage
+  medicalAidRate?: number; // Fixed amount or percentage
+  
+  isActive: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Timesheet {
+  timesheetId: string;
+  orgId: string;
+  employeeId: string;
+  payPeriodId: string;
+  
+  // Time Entries
+  regularHours: number;
+  overtimeHours: number;
+  leaveHours: number;
+  holidayHours: number;
+  sickHours: number;
+  
+  // Approval
+  submittedBy: string;
+  submittedAt: Timestamp;
+  approvedBy?: string;
+  approvedAt?: Timestamp;
+  status: 'Draft' | 'Submitted' | 'Approved' | 'Rejected';
+  
+  // Notes
+  notes?: string;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Deduction {
+  deductionId: string;
+  orgId: string;
+  
+  name: string; // e.g., "PAYE Tax", "Pension Fund", "Medical Aid"
+  type: 'Tax' | 'Pension' | 'MedicalAid' | 'Other';
+  
+  // Calculation
+  rateType: 'Percentage' | 'FixedAmount';
+  rate: number; // Percentage or fixed amount
+  
+  isActive: boolean;
+  description?: string;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Payslip {
+  payslipId: string;
+  orgId: string;
+  payPeriodId: string;
+  employeeId: string;
+  
+  // Period
+  startDate: Timestamp;
+  endDate: Timestamp;
+  payDate: Timestamp;
+  
+  // Earnings
+  regularPay: number;
+  overtimePay: number;
+  holidayPay: number;
+  sickPay: number;
+  otherPay: number;
+  grossPay: number;
+  
+  // Deductions
+  taxDeduction: number;
+  pensionDeduction: number;
+  medicalAidDeduction: number;
+  otherDeductions: number;
+  totalDeductions: number;
+  
+  // Net Pay
+  netPay: number;
+  
+  // Status
+  status: 'Draft' | 'Generated' | 'Sent' | 'Paid';
+  
+  // Delivery
+  sentMethod?: 'Email' | 'Print' | 'Manual';
+  sentAt?: Timestamp;
+  
+  // Audit
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface EmployeeDeduction {
+  assignmentId: string;
+  orgId: string;
+  employeeId: string;
+  deductionId: string;
+  
+  // Override default rate
+  customRate?: number; // If different from deduction default rate
+  
+  isActive: boolean;
+  effectiveFrom: Timestamp;
+  effectiveTo?: Timestamp;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
