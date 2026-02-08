@@ -1,0 +1,317 @@
+
+<div class="container mx-auto px-4 py-6">
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Supplier Directory</h1>
+      <p class="text-gray-600">Manage supplier contacts and information</p>
+    </div>
+    <button
+      (click)="showAddForm()"
+      class="btn btn-primary"
+    >
+      Add Supplier
+    </button>
+  </div>
+
+  <!-- Supplier Form -->
+  <div *ngIf="showForm" class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">
+      {{ isEditing ? 'Edit Supplier' : 'Add New Supplier' }}
+    </h2>
+
+    <form [formGroup]="supplierForm" (ngSubmit)="saveSupplier()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Company Name -->
+      <div>
+        <label for="companyName" class="block text-sm font-medium text-gray-700 mb-1">
+          Company Name *
+        </label>
+        <input
+          type="text"
+          id="companyName"
+          formControlName="companyName"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="e.g., ABC Supplies Ltd"
+        />
+      </div>
+
+      <!-- Registration Number -->
+      <div>
+        <label for="registrationNumber" class="block text-sm font-medium text-gray-700 mb-1">
+          Registration Number
+        </label>
+        <input
+          type="text"
+          id="registrationNumber"
+          formControlName="registrationNumber"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Contact Person -->
+      <div>
+        <label for="contactPerson" class="block text-sm font-medium text-gray-700 mb-1">
+          Contact Person *
+        </label>
+        <input
+          type="text"
+          id="contactPerson"
+          formControlName="contactPerson"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Email -->
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+          Email *
+        </label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Phone -->
+      <div>
+        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+          Phone *
+        </label>
+        <input
+          type="text"
+          id="phone"
+          formControlName="phone"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Payment Terms -->
+      <div>
+        <label for="paymentTerms" class="block text-sm font-medium text-gray-700 mb-1">
+          Payment Terms *
+        </label>
+        <select
+          id="paymentTerms"
+          formControlName="paymentTerms"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option *ngFor="let term of paymentTermsOptions" [value]="term">{{ term }}</option>
+        </select>
+      </div>
+
+      <!-- Physical Address -->
+      <div class="md:col-span-2">
+        <label for="physicalAddress" class="block text-sm font-medium text-gray-700 mb-1">
+          Physical Address
+        </label>
+        <textarea
+          id="physicalAddress"
+          formControlName="physicalAddress"
+          rows="2"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <!-- Billing Address -->
+      <div class="md:col-span-2">
+        <label for="billingAddress" class="block text-sm font-medium text-gray-700 mb-1">
+          Billing Address
+        </label>
+        <textarea
+          id="billingAddress"
+          formControlName="billingAddress"
+          rows="2"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <!-- Tax ID -->
+      <div>
+        <label for="taxId" class="block text-sm font-medium text-gray-700 mb-1">
+          Tax ID / VAT Number
+        </label>
+        <input
+          type="text"
+          id="taxId"
+          formControlName="taxId"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Average Lead Time -->
+      <div>
+        <label for="averageLeadTimeDays" class="block text-sm font-medium text-gray-700 mb-1">
+          Average Lead Time (Days)
+        </label>
+        <input
+          type="number"
+          id="averageLeadTimeDays"
+          formControlName="averageLeadTimeDays"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Credit Limit -->
+      <div>
+        <label for="creditLimit" class="block text-sm font-medium text-gray-700 mb-1">
+          Credit Limit ($)
+        </label>
+        <input
+          type="number"
+          id="creditLimit"
+          formControlName="creditLimit"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Performance Rating -->
+      <div>
+        <label for="performanceRating" class="block text-sm font-medium text-gray-700 mb-1">
+          Performance Rating (1-5)
+        </label>
+        <input
+          type="number"
+          id="performanceRating"
+          formControlName="performanceRating"
+          min="1"
+          max="5"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <!-- Notes -->
+      <div class="md:col-span-2">
+        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
+          Notes
+        </label>
+        <textarea
+          id="notes"
+          formControlName="notes"
+          rows="3"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <!-- Active Status -->
+      <div class="flex items-center">
+        <input
+          type="checkbox"
+          id="isActive"
+          formControlName="isActive"
+          class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+        />
+        <label for="isActive" class="ml-2 block text-sm text-gray-900">
+          Active Supplier
+        </label>
+      </div>
+
+      <!-- Form Buttons -->
+      <div class="md:col-span-2 flex gap-2 pt-4">
+        <button
+          type="submit"
+          [disabled]="supplierForm.invalid || isLoading"
+          class="btn btn-primary"
+        >
+          {{ isEditing ? 'Update' : 'Create' }} Supplier
+        </button>
+        <button
+          type="button"
+          (click)="cancelEdit()"
+          class="btn btn-secondary"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Suppliers Table -->
+  <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div *ngIf="isLoading" class="p-8 text-center">
+      <p>Loading suppliers...</p>
+    </div>
+
+    <div *ngIf="!isLoading && suppliers.length === 0" class="p-8 text-center text-gray-500">
+      No suppliers found. Click "Add Supplier" to create one.
+    </div>
+
+    <div *ngIf="!isLoading && suppliers.length > 0" class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Company Name
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Contact Person
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Email
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Phone
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Payment Terms
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Rating
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr *ngFor="let supplier of suppliers" class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900">{{ supplier.companyName }}</div>
+              <div class="text-sm text-gray-500" *ngIf="supplier.registrationNumber">{{ supplier.registrationNumber }}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ supplier.contactPerson }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ supplier.email }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ supplier.phone }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ supplier.paymentTerms }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ getStarRating(supplier.performanceRating || 0) }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span
+                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                [ngClass]="supplier.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+              >
+                {{ supplier.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <button
+                (click)="editSupplier(supplier)"
+                class="text-blue-600 hover:text-blue-900 mr-3"
+              >
+                Edit
+              </button>
+              <button
+                (click)="deleteSupplier(supplier)"
+                class="text-red-600 hover:text-red-900"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

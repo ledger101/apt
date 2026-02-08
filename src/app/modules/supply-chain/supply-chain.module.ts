@@ -12,6 +12,14 @@ const routes: Routes = [
         path: 'requisition-workflow',
         loadComponent: () => import('./requisition-workflow/requisition-workflow.component').then(m => m.RequisitionWorkflowComponent)
     },
+    {
+        path: 'suppliers',
+        loadComponent: () => import('./suppliers/suppliers.component').then(m => m.SuppliersComponent)
+    },
+    {
+        path: 'projects',
+        loadComponent: () => import('./projects/projects.component').then(m => m.ProjectsComponent)
+    },
 ];
 
 @NgModule({
@@ -22,3 +30,4 @@ const routes: Routes = [
     ]
 })
 export class SupplyChainModule { }
+
