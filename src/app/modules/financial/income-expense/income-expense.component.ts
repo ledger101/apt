@@ -333,8 +333,16 @@ export class IncomeExpenseComponent implements OnInit {
     };
   }
 
-  formatCurrency(amount: number): string {
-    return `$${amount.toFixed(2)}`;
+  formatCurrency(amount: number, currency: string = 'USD'): string {
+    const currencySymbols: { [key: string]: string } = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'ZAR': 'R',
+      'JPY': '¥'
+    };
+    const symbol = currencySymbols[currency] || currency + ' ';
+    return `${symbol}${amount.toFixed(2)}`;
   }
 
   formatDate(date: Date | string): string {

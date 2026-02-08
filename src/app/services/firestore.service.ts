@@ -915,11 +915,9 @@ export class FirestoreService {
   async getIncomes(orgId?: string): Promise<Income[]> {
     try {
       const incomesCollection = collection(this.firestore, 'incomes');
-      let q = query(incomesCollection, orderBy('incomeDate', 'desc'));
-      
-      if (orgId) {
-        q = query(incomesCollection, where('orgId', '==', orgId), orderBy('incomeDate', 'desc'));
-      }
+      const q = orgId 
+        ? query(incomesCollection, where('orgId', '==', orgId), orderBy('incomeDate', 'desc'))
+        : query(incomesCollection, orderBy('incomeDate', 'desc'));
 
       const querySnapshot = await getDocs(q);
       const incomes: Income[] = [];
@@ -1033,11 +1031,9 @@ export class FirestoreService {
   async getExpenses(orgId?: string): Promise<Expense[]> {
     try {
       const expensesCollection = collection(this.firestore, 'expenses');
-      let q = query(expensesCollection, orderBy('expenseDate', 'desc'));
-      
-      if (orgId) {
-        q = query(expensesCollection, where('orgId', '==', orgId), orderBy('expenseDate', 'desc'));
-      }
+      const q = orgId 
+        ? query(expensesCollection, where('orgId', '==', orgId), orderBy('expenseDate', 'desc'))
+        : query(expensesCollection, orderBy('expenseDate', 'desc'));
 
       const querySnapshot = await getDocs(q);
       const expenses: Expense[] = [];
@@ -1153,11 +1149,9 @@ export class FirestoreService {
   async getEmployees(orgId?: string): Promise<Employee[]> {
     try {
       const employeesCollection = collection(this.firestore, 'employees');
-      let q = query(employeesCollection, orderBy('createdAt', 'desc'));
-      
-      if (orgId) {
-        q = query(employeesCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'));
-      }
+      const q = orgId 
+        ? query(employeesCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'))
+        : query(employeesCollection, orderBy('createdAt', 'desc'));
 
       const querySnapshot = await getDocs(q);
       const employees: Employee[] = [];
@@ -1262,11 +1256,9 @@ export class FirestoreService {
   async getPayPeriods(orgId?: string): Promise<PayPeriod[]> {
     try {
       const payPeriodsCollection = collection(this.firestore, 'pay-periods');
-      let q = query(payPeriodsCollection, orderBy('startDate', 'desc'));
-      
-      if (orgId) {
-        q = query(payPeriodsCollection, where('orgId', '==', orgId), orderBy('startDate', 'desc'));
-      }
+      const q = orgId 
+        ? query(payPeriodsCollection, where('orgId', '==', orgId), orderBy('startDate', 'desc'))
+        : query(payPeriodsCollection, orderBy('startDate', 'desc'));
 
       const querySnapshot = await getDocs(q);
       const payPeriods: PayPeriod[] = [];
