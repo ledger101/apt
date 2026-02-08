@@ -3,7 +3,11 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 
 const routes: Routes = [
-    { path: '', redirectTo: 'material-master', pathMatch: 'full' },
+    { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+    {
+        path: 'dashboard',
+        loadComponent: () => import('./dashboard/dashboard.component').then(m => m.SupplyChainDashboardComponent)
+    },
     {
         path: 'material-master',
         loadComponent: () => import('./material-master/material-master.component').then(m => m.MaterialMasterComponent)
