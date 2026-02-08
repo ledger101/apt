@@ -1,0 +1,63 @@
+/* Income & Expense Component Styles */
+.income-expense-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Table hover effects */
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  backdrop-filter: blur(2px);
+}
+
+/* Summary cards */
+.summary-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Button transitions */
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Form inputs */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  &:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: #3b82f6;
+    border-color: #3b82f6;
+  }
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+}
