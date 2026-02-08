@@ -204,7 +204,7 @@ export class GrnComponent implements OnInit {
         supplierId: this.selectedPO.supplierId,
         supplierName: this.selectedPO.supplierName,
         projectId: this.selectedPO.projectId,
-        siteId: this.selectedPO.siteId,
+        siteId: this.selectedPO.siteId || '',
         dateReceived: Timestamp.fromDate(dateReceived),
         receivedBy: formValue.receivedBy,
         deliveryNoteRef: formValue.deliveryNoteRef,
@@ -223,7 +223,7 @@ export class GrnComponent implements OnInit {
       const grnId = await this.supplyChainService.createGRN(grn);
 
       // Update PO line items with quantities received
-      const updatedPOItems = this.selectedPO.items.map(poItem => {
+      const updatedPOItems = this.selectedPO.items.map((poItem: any) => {
         const grnItem = grnItems.find(gi => gi.poLineNumber === poItem.lineNumber);
         if (grnItem) {
           const newQtyReceived = poItem.quantityReceived + grnItem.quantityReceived;
@@ -238,7 +238,7 @@ export class GrnComponent implements OnInit {
 
       // Check if PO is fully received
       const allItemsReceived = updatedPOItems.every(
-        item => item.quantityReceived >= item.quantityOrdered
+        (item: any) => item.quantityReceived >= item.quantityOrdered
       );
       const newPOStatus = allItemsReceived ? 'Closed' : 'Receiving';
 
@@ -255,7 +255,7 @@ export class GrnComponent implements OnInit {
           if (grnItem.quantityReceived > 0) {
             const transaction: Omit<InventoryTransaction, 'transactionId' | 'transactionDate' | 'createdAt'> = {
               orgId,
-              siteId: this.selectedPO.siteId,
+              siteId: this.selectedPO.siteId || '',
               materialId: grnItem.materialId,
               transactionType: 'Adjustment',
               quantity: grnItem.quantityReceived,
@@ -308,8 +308,11 @@ export class GrnComponent implements OnInit {
     return po ? po.poNumber : poId;
   }
 
-  formatDate(timestamp: Timestamp): string {
+  formatDate(timestamp: Timestamp | Date): string {
     if (!timestamp) return '';
+    if (timestamp instanceof Date) {
+      return timestamp.toLocaleDateString();
+    }
     return timestamp.toDate().toLocaleDateString();
   }
 

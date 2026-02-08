@@ -73,6 +73,17 @@ export class ProjectsComponent implements OnInit {
   editProject(project: Project) {
     this.isEditing = true;
     this.editingProjectId = project.projectId;
+    
+    const startDateStr = project.startDate instanceof Date 
+      ? project.startDate.toISOString().split('T')[0]
+      : (project.startDate as any)?.toDate ? (project.startDate as any).toDate().toISOString().split('T')[0] : '';
+    
+    const endDateStr = project.expectedEndDate 
+      ? (project.expectedEndDate instanceof Date 
+          ? project.expectedEndDate.toISOString().split('T')[0]
+          : (project.expectedEndDate as any)?.toDate ? (project.expectedEndDate as any).toDate().toISOString().split('T')[0] : '')
+      : '';
+    
     this.projectForm.patchValue({
       projectName: project.projectName,
       projectCode: project.projectCode,
@@ -80,8 +91,8 @@ export class ProjectsComponent implements OnInit {
       physicalAddress: project.physicalAddress || '',
       siteManager: project.siteManager || '',
       siteManagerContact: project.siteManagerContact || '',
-      startDate: project.startDate?.toDate ? project.startDate.toDate().toISOString().split('T')[0] : '',
-      expectedEndDate: project.expectedEndDate?.toDate ? project.expectedEndDate.toDate().toISOString().split('T')[0] : '',
+      startDate: startDateStr,
+      expectedEndDate: endDateStr,
       status: project.status,
       totalBudget: project.totalBudget || 0,
       budgetConsumed: project.budgetConsumed || 0,
