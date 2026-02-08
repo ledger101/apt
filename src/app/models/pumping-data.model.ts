@@ -478,163 +478,236 @@ export interface InvoiceConfig {
   updatedBy: string;
 }
 
-// Supply Chain Models
-
-export interface Project {
-  projectId: string;
+// Income & Expense Models
+export interface Income {
+  incomeId: string;
   orgId: string;
-  projectName: string;
-  projectCode: string; // Short code for easy reference
-  description?: string;
-  physicalAddress?: string;
-  siteManager?: string;
-  siteManagerContact?: string;
-  startDate: Timestamp;
-  expectedEndDate?: Timestamp;
-  status: 'Active' | 'Completed' | 'On Hold' | 'Cancelled';
-  totalBudget?: number;
-  budgetConsumed?: number;
-  costCenterCode?: string;
-  createdBy: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface Supplier {
-  supplierId: string;
-  orgId: string;
-  companyName: string;
-  registrationNumber?: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  physicalAddress?: string;
-  billingAddress?: string;
-  taxId?: string;
-  paymentTerms: string; // e.g., 'Net 30', 'Net 60', 'COD'
-  averageLeadTimeDays?: number;
-  creditLimit?: number;
-  performanceRating?: number; // 1-5 stars
-  isActive: boolean;
-  notes?: string;
-  createdBy: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface PurchaseOrder {
-  poId: string;
-  orgId: string;
-  poNumber: string; // Auto-generated user-friendly number
-  supplierId: string;
-  supplierName: string;
-  requisitionIds: string[]; // Can be linked to multiple requisitions
-  projectId: string;
-  siteId: string;
-  expectedDeliveryDate: Timestamp;
-  status: 'Draft' | 'Sent' | 'Acknowledged' | 'Receiving' | 'Closed' | 'Cancelled';
-  items: PurchaseOrderItem[];
-  subtotal: number;
-  taxAmount?: number;
-  shippingCost?: number;
-  discount?: number;
-  totalAmount: number;
+  source: string; // e.g., 'Invoice', 'Other'
+  amount: number;
   currency: string;
-  paymentTerms: string;
-  notes?: string;
+  incomeDate: Date;
+  category: string;
+  description?: string;
+  reference?: string; // Invoice number, receipt number
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Expense {
+  expenseId: string;
+  orgId: string;
+  category: string; // e.g., 'Fuel', 'Materials', 'Salaries'
+  amount: number;
+  currency: string;
+  expenseDate: Date;
+  description?: string;
+  payee?: string; // Vendor or employee name
+  receiptRef?: string;
+  approvedBy?: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Payroll Models
+export interface Employee {
+  employeeId: string;
+  orgId: string;
+  
+  // Personal Information
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  address?: {
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    country: string;
+  };
+  
+  // Employment Information
+  employeeNumber: string; // Unique employee number
+  position: string;
+  department: string;
+  hireDate: Timestamp;
+  terminationDate?: Timestamp;
+  employmentStatus: 'Active' | 'Inactive' | 'OnLeave' | 'Terminated';
+  
+  // Compensation
+  salaryStructureId: string;
+  hourlyRate?: number;
+  bankAccount?: {
+    bankName: string;
+    accountNumber: string;
+    accountType: 'Checking' | 'Savings';
+  };
+  
+  // Tax Information
+  taxId?: string;
+  taxNumber?: string;
+  
+  // Audit
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface PayPeriod {
+  payPeriodId: string;
+  orgId: string;
+  
+  periodType: 'Weekly' | 'BiWeekly' | 'Monthly';
+  startDate: Timestamp;
+  endDate: Timestamp;
+  status: 'Open' | 'Processing' | 'Closed';
+  
+  // Summary
+  totalEmployees: number;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalNetPay: number;
+  
+  // Audit
+  processedBy: string;
+  processedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface SalaryStructure {
+  structureId: string;
+  orgId: string;
+  
+  name: string; // e.g., "Standard Full-Time", "Hourly Worker"
+  type: 'Salaried' | 'Hourly';
+  
+  // Compensation Details
+  baseSalary?: number; // Monthly base salary
+  hourlyRate?: number; // Hourly rate
+  overtimeRate?: number; // Overtime multiplier (e.g., 1.5x)
+  holidayRate?: number; // Holiday pay multiplier
+  sickRate?: number; // Sick leave pay multiplier
+  
+  // Allowances
+  housingAllowance?: number;
+  transportAllowance?: number;
+  medicalAllowance?: number;
+  otherAllowances?: number;
+  
+  // Deductions
+  pensionRate?: number; // Percentage
+  taxRate?: number; // Percentage
+  medicalAidRate?: number; // Fixed amount or percentage
+  
+  isActive: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Timesheet {
+  timesheetId: string;
+  orgId: string;
+  employeeId: string;
+  payPeriodId: string;
+  
+  // Time Entries
+  regularHours: number;
+  overtimeHours: number;
+  leaveHours: number;
+  holidayHours: number;
+  sickHours: number;
+  
+  // Approval
+  submittedBy: string;
+  submittedAt: Timestamp;
   approvedBy?: string;
   approvedAt?: Timestamp;
+  status: 'Draft' | 'Submitted' | 'Approved' | 'Rejected';
+  
+  // Notes
+  notes?: string;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Deduction {
+  deductionId: string;
+  orgId: string;
+  
+  name: string; // e.g., "PAYE Tax", "Pension Fund", "Medical Aid"
+  type: 'Tax' | 'Pension' | 'MedicalAid' | 'Other';
+  
+  // Calculation
+  rateType: 'Percentage' | 'FixedAmount';
+  rate: number; // Percentage or fixed amount
+  
+  isActive: boolean;
+  description?: string;
+  
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Payslip {
+  payslipId: string;
+  orgId: string;
+  payPeriodId: string;
+  employeeId: string;
+  
+  // Period
+  startDate: Timestamp;
+  endDate: Timestamp;
+  payDate: Timestamp;
+  
+  // Earnings
+  regularPay: number;
+  overtimePay: number;
+  holidayPay: number;
+  sickPay: number;
+  otherPay: number;
+  grossPay: number;
+  
+  // Deductions
+  taxDeduction: number;
+  pensionDeduction: number;
+  medicalAidDeduction: number;
+  otherDeductions: number;
+  totalDeductions: number;
+  
+  // Net Pay
+  netPay: number;
+  
+  // Status
+  status: 'Draft' | 'Generated' | 'Sent' | 'Paid';
+  
+  // Delivery
+  sentMethod?: 'Email' | 'Print' | 'Manual';
   sentAt?: Timestamp;
-}
-
-export interface PurchaseOrderItem {
-  lineNumber: number;
-  materialId: string;
-  materialCode: string;
-  materialName: string;
-  description: string;
-  quantityOrdered: number;
-  unit: string;
-  unitPrice: number;
-  lineTotal: number;
-  taxAmount?: number;
-  quantityReceived: number;
-  quantityOutstanding: number;
-}
-
-export interface GoodsReceivedNote {
-  grnId: string;
-  orgId: string;
-  grnNumber: string; // Auto-generated
-  poId: string;
-  poNumber: string;
-  supplierId: string;
-  supplierName: string;
-  projectId: string;
-  siteId: string;
-  dateReceived: Timestamp;
-  receivedBy: string;
-  deliveryNoteRef?: string;
-  invoiceRef?: string;
-  qualityCheckStatus: 'Passed' | 'Failed' | 'Partial';
-  items: GoodsReceivedItem[];
-  totalValue: number;
-  notes?: string;
-  discrepancyNotes?: string;
+  
+  // Audit
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-export interface GoodsReceivedItem {
-  lineNumber: number;
-  poLineNumber: number;
-  materialId: string;
-  materialCode: string;
-  materialName: string;
-  quantityOrdered: number;
-  quantityReceived: number;
-  quantityRejected: number;
-  unit: string;
-  unitCost: number;
-  lineTotal: number;
-  storageLocation?: string;
-  conditionNotes?: string;
-}
-
-export interface Disbursement {
-  disbursementId: string;
+export interface EmployeeDeduction {
+  assignmentId: string;
   orgId: string;
-  disbursementNumber: string; // Auto-generated
-  projectId: string;
-  siteId: string;
-  requisitionId?: string;
-  dateIssued: Timestamp;
-  issuedBy: string;
-  receivedBy: string;
-  purpose: string;
-  workOrderNumber?: string;
-  status: 'Issued' | 'Partially Returned' | 'Returned' | 'Closed';
-  items: DisbursementItem[];
-  totalCost: number;
-  costCenter?: string;
-  notes?: string;
-  createdBy: string;
+  employeeId: string;
+  deductionId: string;
+  
+  // Override default rate
+  customRate?: number; // If different from deduction default rate
+  
+  isActive: boolean;
+  effectiveFrom: Timestamp;
+  effectiveTo?: Timestamp;
+  
   createdAt: Timestamp;
   updatedAt: Timestamp;
-}
-
-export interface DisbursementItem {
-  lineNumber: number;
-  materialId: string;
-  materialCode: string;
-  materialName: string;
-  quantityIssued: number;
-  unit: string;
-  unitCost: number;
-  totalCost: number;
-  quantityReturned: number;
 }

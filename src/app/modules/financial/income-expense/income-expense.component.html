@@ -1,0 +1,453 @@
+<!-- Navigation Header -->
+<nav class="bg-[#F5E642] shadow-sm border-b border-yellow-500 fixed top-0 left-0 right-0 z-50">
+  <div class="mx-auto px-6 lg:px-10">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center space-x-8">
+        <!-- Logo -->
+        <div class="flex-shrink-0">
+          <img class="h-10 w-auto" src="/apt-logo-trimmed.svg" alt="APT">
+        </div>
+        
+        <!-- Back to Financial Control -->
+        <button
+          (click)="goBack()"
+          class="flex items-center text-gray-900 hover:text-gray-700 transition-colors duration-200 font-medium"
+        >
+          <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Financial Control
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="min-h-screen bg-gray-50 pt-20">
+  <div class="p-6">
+    <h1 class="text-3xl font-bold mb-6">Income & Expense Management</h1>
+
+    <!-- Error Message -->
+    <div *ngIf="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      {{ error }}
+    </div>
+
+    <!-- Loading Indicator -->
+    <div *ngIf="loading" class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      <p class="mt-2">Loading...</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-6 border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8">
+        <button
+          (click)="activeTab = 'dashboard'; applyFilters()"
+          [class.border-blue-500]="activeTab === 'dashboard'"
+          [class.text-blue-600]="activeTab === 'dashboard'"
+          [class.border-transparent]="activeTab !== 'dashboard'"
+          [class.text-gray-500]="activeTab !== 'dashboard'"
+          class="py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300"
+        >
+          Dashboard
+        </button>
+        <button
+          (click)="activeTab = 'income'; applyFilters()"
+          [class.border-blue-500]="activeTab === 'income'"
+          [class.text-blue-600]="activeTab === 'income'"
+          [class.border-transparent]="activeTab !== 'income'"
+          [class.text-gray-500]="activeTab !== 'income'"
+          class="py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300"
+        >
+          Income ({{ filteredIncomes.length }})
+        </button>
+        <button
+          (click)="activeTab = 'expense'; applyFilters()"
+          [class.border-blue-500]="activeTab === 'expense'"
+          [class.text-blue-600]="activeTab === 'expense'"
+          [class.border-transparent]="activeTab !== 'expense'"
+          [class.text-gray-500]="activeTab !== 'expense'"
+          class="py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300"
+        >
+          Expenses ({{ filteredExpenses.length }})
+        </button>
+      </nav>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div *ngIf="activeTab === 'dashboard'">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Total Income Card -->
+        <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-green-600">Total Income</p>
+              <p class="text-2xl font-bold text-green-900 mt-2">{{ formatCurrency(totalIncome) }}</p>
+            </div>
+            <div class="p-3 bg-green-100 rounded-full">
+              <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Expense Card -->
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-red-600">Total Expenses</p>
+              <p class="text-2xl font-bold text-red-900 mt-2">{{ formatCurrency(totalExpense) }}</p>
+            </div>
+            <div class="p-3 bg-red-100 rounded-full">
+              <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Net Balance Card -->
+        <div class="border rounded-lg p-6" [class.bg-blue-50]="netBalance >= 0" [class.border-blue-200]="netBalance >= 0" [class.bg-yellow-50]="netBalance < 0" [class.border-yellow-200]="netBalance < 0">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium" [class.text-blue-600]="netBalance >= 0" [class.text-yellow-600]="netBalance < 0">Net Balance</p>
+              <p class="text-2xl font-bold mt-2" [class.text-blue-900]="netBalance >= 0" [class.text-yellow-900]="netBalance < 0">{{ formatCurrency(netBalance) }}</p>
+            </div>
+            <div class="p-3 rounded-full" [class.bg-blue-100]="netBalance >= 0" [class.bg-yellow-100]="netBalance < 0">
+              <svg class="h-8 w-8" [class.text-blue-600]="netBalance >= 0" [class.text-yellow-600]="netBalance < 0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">Summary</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p class="text-sm text-gray-600">Total Income Entries</p>
+            <p class="text-xl font-bold">{{ incomes.length }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Total Expense Entries</p>
+            <p class="text-xl font-bold">{{ expenses.length }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Pending Expenses</p>
+            <p class="text-xl font-bold">{{ getPendingExpensesCount() }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Approved Expenses</p>
+            <p class="text-xl font-bold">{{ getApprovedExpensesCount() }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">Recent Transactions</h2>
+        <div class="space-y-4">
+          <!-- Recent Income -->
+          <div *ngFor="let income of incomes.slice(0, 3)" class="flex items-center justify-between border-b pb-3">
+            <div class="flex items-center space-x-3">
+              <div class="p-2 bg-green-100 rounded">
+                <svg class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium">{{ income.source }}</p>
+                <p class="text-sm text-gray-500">{{ income.category }} • {{ formatDate(income.incomeDate) }}</p>
+              </div>
+            </div>
+            <span class="font-semibold text-green-600">+{{ formatCurrency(income.amount) }}</span>
+          </div>
+
+          <!-- Recent Expense -->
+          <div *ngFor="let expense of expenses.slice(0, 3)" class="flex items-center justify-between border-b pb-3 last:border-0">
+            <div class="flex items-center space-x-3">
+              <div class="p-2 bg-red-100 rounded">
+                <svg class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium">{{ expense.category }}</p>
+                <p class="text-sm text-gray-500">{{ expense.payee || 'N/A' }} • {{ formatDate(expense.expenseDate) }}</p>
+              </div>
+            </div>
+            <span class="font-semibold text-red-600">-{{ formatCurrency(expense.amount) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Income Tab -->
+    <div *ngIf="activeTab === 'income'">
+      <!-- Filters and Add Button -->
+      <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="applyFilters()"
+            placeholder="Search..."
+            class="border rounded px-3 py-2"
+          />
+          <select [(ngModel)]="categoryFilter" (ngModelChange)="applyFilters()" class="border rounded px-3 py-2">
+            <option value="">All Categories</option>
+            <option *ngFor="let cat of incomeCategories" [value]="cat">{{ cat }}</option>
+          </select>
+          <input
+            type="date"
+            [(ngModel)]="dateFrom"
+            (ngModelChange)="applyFilters()"
+            placeholder="From Date"
+            class="border rounded px-3 py-2"
+          />
+          <input
+            type="date"
+            [(ngModel)]="dateTo"
+            (ngModelChange)="applyFilters()"
+            placeholder="To Date"
+            class="border rounded px-3 py-2"
+          />
+        </div>
+        <div class="flex justify-between">
+          <button
+            (click)="clearFilters()"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Clear Filters
+          </button>
+          <button
+            (click)="openIncomeModal()"
+            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
+            + Add Income
+          </button>
+        </div>
+      </div>
+
+      <!-- Income List -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr *ngFor="let income of filteredIncomes" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">{{ formatDate(income.incomeDate) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">{{ income.source }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">{{ income.category }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">{{ formatCurrency(income.amount) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">{{ income.reference || 'N/A' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button (click)="openIncomeModal(income)" class="text-blue-600 hover:text-blue-800">Edit</button>
+                <button (click)="deleteIncome(income)" class="text-red-600 hover:text-red-800">Delete</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredIncomes.length === 0">
+              <td colspan="6" class="px-6 py-4 text-center text-gray-500">No income entries found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Expense Tab -->
+    <div *ngIf="activeTab === 'expense'">
+      <!-- Filters and Add Button -->
+      <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="applyFilters()"
+            placeholder="Search..."
+            class="border rounded px-3 py-2"
+          />
+          <select [(ngModel)]="categoryFilter" (ngModelChange)="applyFilters()" class="border rounded px-3 py-2">
+            <option value="">All Categories</option>
+            <option *ngFor="let cat of expenseCategories" [value]="cat">{{ cat }}</option>
+          </select>
+          <select [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()" class="border rounded px-3 py-2">
+            <option value="">All Statuses</option>
+            <option *ngFor="let status of expenseStatuses" [value]="status">{{ status }}</option>
+          </select>
+          <input
+            type="date"
+            [(ngModel)]="dateFrom"
+            (ngModelChange)="applyFilters()"
+            placeholder="From Date"
+            class="border rounded px-3 py-2"
+          />
+          <input
+            type="date"
+            [(ngModel)]="dateTo"
+            (ngModelChange)="applyFilters()"
+            placeholder="To Date"
+            class="border rounded px-3 py-2"
+          />
+        </div>
+        <div class="flex justify-between">
+          <button
+            (click)="clearFilters()"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Clear Filters
+          </button>
+          <button
+            (click)="openExpenseModal()"
+            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            + Add Expense
+          </button>
+        </div>
+      </div>
+
+      <!-- Expense List -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payee</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr *ngFor="let expense of filteredExpenses" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm">{{ formatDate(expense.expenseDate) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">{{ expense.category }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">{{ expense.payee || 'N/A' }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">{{ formatCurrency(expense.amount) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="px-2 py-1 rounded text-xs" 
+                  [class.bg-yellow-100]="expense.status === 'Pending'"
+                  [class.text-yellow-800]="expense.status === 'Pending'"
+                  [class.bg-green-100]="expense.status === 'Approved'"
+                  [class.text-green-800]="expense.status === 'Approved'"
+                  [class.bg-red-100]="expense.status === 'Rejected'"
+                  [class.text-red-800]="expense.status === 'Rejected'">
+                  {{ expense.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                <button (click)="openExpenseModal(expense)" class="text-blue-600 hover:text-blue-800">Edit</button>
+                <button (click)="deleteExpense(expense)" class="text-red-600 hover:text-red-800">Delete</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredExpenses.length === 0">
+              <td colspan="6" class="px-6 py-4 text-center text-gray-500">No expense entries found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Income Modal -->
+<div *ngIf="showIncomeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-full max-w-md">
+    <h2 class="text-xl font-bold mb-4">{{ isEditMode ? 'Edit' : 'Add' }} Income</h2>
+    <form (ngSubmit)="saveIncome()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Source *</label>
+          <input type="text" [(ngModel)]="incomeForm.source" name="source" required class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Category *</label>
+          <select [(ngModel)]="incomeForm.category" name="category" required class="w-full border rounded px-3 py-2">
+            <option value="">Select Category</option>
+            <option *ngFor="let cat of incomeCategories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Amount *</label>
+          <input type="number" [(ngModel)]="incomeForm.amount" name="amount" required min="0" step="0.01" class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Date *</label>
+          <input type="date" [(ngModel)]="incomeForm.incomeDate" name="incomeDate" required class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Reference</label>
+          <input type="text" [(ngModel)]="incomeForm.reference" name="reference" class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Description</label>
+          <textarea [(ngModel)]="incomeForm.description" name="description" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-3 mt-6">
+        <button type="button" (click)="closeIncomeModal()" class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div *ngIf="showExpenseModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg p-6 w-full max-w-md">
+    <h2 class="text-xl font-bold mb-4">{{ isEditMode ? 'Edit' : 'Add' }} Expense</h2>
+    <form (ngSubmit)="saveExpense()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Category *</label>
+          <select [(ngModel)]="expenseForm.category" name="category" required class="w-full border rounded px-3 py-2">
+            <option value="">Select Category</option>
+            <option *ngFor="let cat of expenseCategories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Amount *</label>
+          <input type="number" [(ngModel)]="expenseForm.amount" name="amount" required min="0" step="0.01" class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Date *</label>
+          <input type="date" [(ngModel)]="expenseForm.expenseDate" name="expenseDate" required class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Payee</label>
+          <input type="text" [(ngModel)]="expenseForm.payee" name="payee" class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Receipt Reference</label>
+          <input type="text" [(ngModel)]="expenseForm.receiptRef" name="receiptRef" class="w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Status *</label>
+          <select [(ngModel)]="expenseForm.status" name="status" required class="w-full border rounded px-3 py-2">
+            <option *ngFor="let status of expenseStatuses" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Description</label>
+          <textarea [(ngModel)]="expenseForm.description" name="description" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end space-x-3 mt-6">
+        <button type="button" (click)="closeExpenseModal()" class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
