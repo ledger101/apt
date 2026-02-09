@@ -186,14 +186,14 @@ export class GrnComponent implements OnInit {
           materialId: control.get('materialId')?.value,
           materialCode: control.get('materialCode')?.value,
           materialName: control.get('materialName')?.value,
-          orderedQuantity: control.get('quantityOrdered')?.value,
-          quantityOrdered: control.get('quantityOrdered')?.value,
+          orderedQuantity: control.get('quantityOrdered')?.value || 0,
+          quantityOrdered: control.get('quantityOrdered')?.value || 0,
           receivedQuantity: control.get('quantityReceived')?.value || 0,
           quantityReceived: control.get('quantityReceived')?.value || 0,
           quantityRejected: control.get('quantityRejected')?.value || 0,
           unit: control.get('unit')?.value,
-          unitCost: control.get('unitCost')?.value,
-          lineTotal: (control.get('quantityReceived')?.value || 0) * control.get('unitCost')?.value,
+          unitCost: control.get('unitCost')?.value || 0,
+          lineTotal: (control.get('quantityReceived')?.value || 0) * (control.get('unitCost')?.value || 0),
           storageLocation: control.get('storageLocation')?.value,
           conditionNotes: control.get('conditionNotes')?.value,
           qualityStatus: 'Passed' as const
@@ -230,9 +230,9 @@ export class GrnComponent implements OnInit {
       const updatedPOItems = this.selectedPO.items.map((poItem: any) => {
         const grnItem = grnItems.find(gi => gi.poLineNumber === poItem.lineNumber);
         if (grnItem) {
-          const grnQty = grnItem.quantityReceived ?? grnItem.receivedQuantity;
+          const grnQty = grnItem.quantityReceived ?? grnItem.receivedQuantity ?? 0;
           const poQty = poItem.quantityReceived ?? 0;
-          const newQtyReceived = poQty + (grnQty ?? 0);
+          const newQtyReceived = poQty + grnQty;
           return {
             ...poItem,
             quantityReceived: newQtyReceived,
@@ -258,8 +258,8 @@ export class GrnComponent implements OnInit {
       // Create inventory transactions for received items (only if quality check passed)
       if (formValue.qualityCheckStatus === 'Passed' || formValue.qualityCheckStatus === 'Partial') {
         for (const grnItem of grnItems) {
-          const qtyReceived = grnItem.quantityReceived ?? grnItem.receivedQuantity;
-          if (qtyReceived && qtyReceived > 0) {
+          const qtyReceived = grnItem.quantityReceived ?? grnItem.receivedQuantity ?? 0;
+          if (qtyReceived > 0) {
             const transaction: Omit<InventoryTransaction, 'transactionId' | 'transactionDate' | 'createdAt'> = {
               orgId,
               siteId: this.selectedPO.siteId || 'default-site',
