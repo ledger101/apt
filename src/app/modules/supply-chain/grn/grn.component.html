@@ -275,8 +275,8 @@
             <span class="text-blue-600 font-medium">{{ grn.poNumber }}</span>
           </td>
           <td>{{ grn.supplierName }}</td>
-          <td>{{ getProjectName(grn.projectId) }}</td>
-          <td class="numeric font-medium">{{ formatCurrency(grn.totalValue) }}</td>
+          <td>{{ getProjectName(grn.projectId || '') }}</td>
+          <td class="numeric font-medium">{{ formatCurrency(grn.totalValue || 0) }}</td>
           <td>
             <span class="status-badge" [ngClass]="getQualityCheckClass(grn.qualityCheckStatus)">
               {{ grn.qualityCheckStatus }}

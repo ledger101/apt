@@ -348,7 +348,7 @@
             <td>{{ getProjectName(po.projectId) }}</td>
             <td>{{ formatDate(po.createdAt) }}</td>
             <td>{{ formatDate(po.expectedDeliveryDate) }}</td>
-            <td class="numeric">{{ formatCurrency(po.totalAmount, po.currency) }}</td>
+            <td class="numeric">{{ formatCurrency(po.totalAmount || po.totalValue, po.currency) }}</td>
             <td>
               <span class="status-badge" [ngClass]="getStatusClass(po.status)">
                 {{ po.status }}

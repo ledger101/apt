@@ -15,7 +15,7 @@ import {
   orderBy,
   collectionGroup
 } from '@angular/fire/firestore';
-import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob, Invoice, InvoiceConfig, Income, Expense, Employee, PayPeriod, SalaryStructure, Timesheet, Deduction, Payslip, EmployeeDeduction } from '../models/pumping-data.model';
+import { Report, AquiferTest, Material, Requisition, InventoryTransaction, Site, Borehole, DischargeTest, Series, Quality, ParseJob, Invoice, InvoiceConfig, Income, Expense, Employee, PayPeriod, SalaryStructure, Timesheet, Deduction, Payslip, EmployeeDeduction, Project, Supplier, PurchaseOrder, GoodsReceivedNote, Disbursement } from '../models/pumping-data.model';
 
 @Injectable({
   providedIn: 'root'
@@ -747,29 +747,29 @@ export class FirestoreService {
   // ==================== SUPPLY CHAIN METHODS ====================
 
   // Project methods
-  async getProjectsByOrg(orgId: string): Promise<any[]> {
+  async getProjectsByOrg(orgId: string): Promise<Project[]> {
     try {
       const projectsCollection = collection(this.firestore, 'projects');
-      const q = query(projectsCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'));
+      const q = query(projectsCollection, where('orgId', '==', orgId), orderBy('projectName'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         projectId: doc.id,
         ...doc.data()
-      }));
+      } as Project));
     } catch (error) {
       console.error('Error getting projects:', error);
       throw error;
     }
   }
 
-  async getProject(projectId: string): Promise<any | null> {
+  async getProject(projectId: string): Promise<Project | null> {
     try {
       const projectDoc = await getDoc(doc(this.firestore, 'projects', projectId));
       if (projectDoc.exists()) {
         return {
           projectId: projectDoc.id,
           ...projectDoc.data()
-        };
+        } as Project;
       }
       return null;
     } catch (error) {
@@ -778,7 +778,7 @@ export class FirestoreService {
     }
   }
 
-  async createProject(project: any): Promise<string> {
+  async createProject(project: Omit<Project, 'projectId'>): Promise<string> {
     try {
       const projectsCollection = collection(this.firestore, 'projects');
       const projectData = {
@@ -794,7 +794,7 @@ export class FirestoreService {
     }
   }
 
-  async updateProject(projectId: string, updates: any): Promise<void> {
+  async updateProject(projectId: string, updates: Partial<Project>): Promise<void> {
     try {
       const projectRef = doc(this.firestore, 'projects', projectId);
       await updateDoc(projectRef, {
@@ -817,29 +817,29 @@ export class FirestoreService {
   }
 
   // Supplier methods
-  async getSuppliersByOrg(orgId: string): Promise<any[]> {
+  async getSuppliersByOrg(orgId: string): Promise<Supplier[]> {
     try {
       const suppliersCollection = collection(this.firestore, 'suppliers');
-      const q = query(suppliersCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'));
+      const q = query(suppliersCollection, where('orgId', '==', orgId), orderBy('companyName'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         supplierId: doc.id,
         ...doc.data()
-      }));
+      } as Supplier));
     } catch (error) {
       console.error('Error getting suppliers:', error);
       throw error;
     }
   }
 
-  async getSupplier(supplierId: string): Promise<any | null> {
+  async getSupplier(supplierId: string): Promise<Supplier | null> {
     try {
       const supplierDoc = await getDoc(doc(this.firestore, 'suppliers', supplierId));
       if (supplierDoc.exists()) {
         return {
           supplierId: supplierDoc.id,
           ...supplierDoc.data()
-        };
+        } as Supplier;
       }
       return null;
     } catch (error) {
@@ -848,7 +848,7 @@ export class FirestoreService {
     }
   }
 
-  async createSupplier(supplier: any): Promise<string> {
+  async createSupplier(supplier: Omit<Supplier, 'supplierId'>): Promise<string> {
     try {
       const suppliersCollection = collection(this.firestore, 'suppliers');
       const supplierData = {
@@ -864,7 +864,7 @@ export class FirestoreService {
     }
   }
 
-  async updateSupplier(supplierId: string, updates: any): Promise<void> {
+  async updateSupplier(supplierId: string, updates: Partial<Supplier>): Promise<void> {
     try {
       const supplierRef = doc(this.firestore, 'suppliers', supplierId);
       await updateDoc(supplierRef, {
@@ -887,29 +887,29 @@ export class FirestoreService {
   }
 
   // Purchase Order methods
-  async getPurchaseOrdersByOrg(orgId: string): Promise<any[]> {
+  async getPurchaseOrdersByOrg(orgId: string): Promise<PurchaseOrder[]> {
     try {
-      const purchaseOrdersCollection = collection(this.firestore, 'purchaseOrders');
-      const q = query(purchaseOrdersCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'));
+      const posCollection = collection(this.firestore, 'purchase-orders');
+      const q = query(posCollection, where('orgId', '==', orgId), orderBy('orderDate', 'desc'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         poId: doc.id,
         ...doc.data()
-      }));
+      } as PurchaseOrder));
     } catch (error) {
       console.error('Error getting purchase orders:', error);
       throw error;
     }
   }
 
-  async getPurchaseOrder(poId: string): Promise<any | null> {
+  async getPurchaseOrder(poId: string): Promise<PurchaseOrder | null> {
     try {
-      const poDoc = await getDoc(doc(this.firestore, 'purchaseOrders', poId));
+      const poDoc = await getDoc(doc(this.firestore, 'purchase-orders', poId));
       if (poDoc.exists()) {
         return {
           poId: poDoc.id,
           ...poDoc.data()
-        };
+        } as PurchaseOrder;
       }
       return null;
     } catch (error) {
@@ -918,15 +918,15 @@ export class FirestoreService {
     }
   }
 
-  async createPurchaseOrder(po: any): Promise<string> {
+  async createPurchaseOrder(po: Omit<PurchaseOrder, 'poId'>): Promise<string> {
     try {
-      const purchaseOrdersCollection = collection(this.firestore, 'purchaseOrders');
+      const posCollection = collection(this.firestore, 'purchase-orders');
       const poData = {
         ...po,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       };
-      const docRef = await addDoc(purchaseOrdersCollection, poData);
+      const docRef = await addDoc(posCollection, poData);
       return docRef.id;
     } catch (error) {
       console.error('Error creating purchase order:', error);
@@ -934,9 +934,9 @@ export class FirestoreService {
     }
   }
 
-  async updatePurchaseOrder(poId: string, updates: any): Promise<void> {
+  async updatePurchaseOrder(poId: string, updates: Partial<PurchaseOrder>): Promise<void> {
     try {
-      const poRef = doc(this.firestore, 'purchaseOrders', poId);
+      const poRef = doc(this.firestore, 'purchase-orders', poId);
       await updateDoc(poRef, {
         ...updates,
         updatedAt: Timestamp.now()
@@ -949,37 +949,37 @@ export class FirestoreService {
 
   async deletePurchaseOrder(poId: string): Promise<void> {
     try {
-      await deleteDoc(doc(this.firestore, 'purchaseOrders', poId));
+      await deleteDoc(doc(this.firestore, 'purchase-orders', poId));
     } catch (error) {
       console.error('Error deleting purchase order:', error);
       throw error;
     }
   }
 
-  // GRN methods
-  async getGRNsByOrg(orgId: string): Promise<any[]> {
+  // GRN (Goods Received Note) methods
+  async getGRNsByOrg(orgId: string): Promise<GoodsReceivedNote[]> {
     try {
-      const grnsCollection = collection(this.firestore, 'goodsReceivedNotes');
-      const q = query(grnsCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'));
+      const grnsCollection = collection(this.firestore, 'goods-received-notes');
+      const q = query(grnsCollection, where('orgId', '==', orgId), orderBy('dateReceived', 'desc'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         grnId: doc.id,
         ...doc.data()
-      }));
+      } as GoodsReceivedNote));
     } catch (error) {
       console.error('Error getting GRNs:', error);
       throw error;
     }
   }
 
-  async getGRN(grnId: string): Promise<any | null> {
+  async getGRN(grnId: string): Promise<GoodsReceivedNote | null> {
     try {
-      const grnDoc = await getDoc(doc(this.firestore, 'goodsReceivedNotes', grnId));
+      const grnDoc = await getDoc(doc(this.firestore, 'goods-received-notes', grnId));
       if (grnDoc.exists()) {
         return {
           grnId: grnDoc.id,
           ...grnDoc.data()
-        };
+        } as GoodsReceivedNote;
       }
       return null;
     } catch (error) {
@@ -988,9 +988,9 @@ export class FirestoreService {
     }
   }
 
-  async createGRN(grn: any): Promise<string> {
+  async createGRN(grn: Omit<GoodsReceivedNote, 'grnId'>): Promise<string> {
     try {
-      const grnsCollection = collection(this.firestore, 'goodsReceivedNotes');
+      const grnsCollection = collection(this.firestore, 'goods-received-notes');
       const grnData = {
         ...grn,
         createdAt: Timestamp.now(),
@@ -1004,9 +1004,9 @@ export class FirestoreService {
     }
   }
 
-  async updateGRN(grnId: string, updates: any): Promise<void> {
+  async updateGRN(grnId: string, updates: Partial<GoodsReceivedNote>): Promise<void> {
     try {
-      const grnRef = doc(this.firestore, 'goodsReceivedNotes', grnId);
+      const grnRef = doc(this.firestore, 'goods-received-notes', grnId);
       await updateDoc(grnRef, {
         ...updates,
         updatedAt: Timestamp.now()
@@ -1019,7 +1019,7 @@ export class FirestoreService {
 
   async deleteGRN(grnId: string): Promise<void> {
     try {
-      await deleteDoc(doc(this.firestore, 'goodsReceivedNotes', grnId));
+      await deleteDoc(doc(this.firestore, 'goods-received-notes', grnId));
     } catch (error) {
       console.error('Error deleting GRN:', error);
       throw error;
@@ -1027,29 +1027,29 @@ export class FirestoreService {
   }
 
   // Disbursement methods
-  async getDisbursementsByOrg(orgId: string): Promise<any[]> {
+  async getDisbursementsByOrg(orgId: string): Promise<Disbursement[]> {
     try {
       const disbursementsCollection = collection(this.firestore, 'disbursements');
-      const q = query(disbursementsCollection, where('orgId', '==', orgId), orderBy('createdAt', 'desc'));
+      const q = query(disbursementsCollection, where('orgId', '==', orgId), orderBy('dateIssued', 'desc'));
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map(doc => ({
         disbursementId: doc.id,
         ...doc.data()
-      }));
+      } as Disbursement));
     } catch (error) {
       console.error('Error getting disbursements:', error);
       throw error;
     }
   }
 
-  async getDisbursement(disbursementId: string): Promise<any | null> {
+  async getDisbursement(disbursementId: string): Promise<Disbursement | null> {
     try {
       const disbursementDoc = await getDoc(doc(this.firestore, 'disbursements', disbursementId));
       if (disbursementDoc.exists()) {
         return {
           disbursementId: disbursementDoc.id,
           ...disbursementDoc.data()
-        };
+        } as Disbursement;
       }
       return null;
     } catch (error) {
@@ -1058,7 +1058,7 @@ export class FirestoreService {
     }
   }
 
-  async createDisbursement(disbursement: any): Promise<string> {
+  async createDisbursement(disbursement: Omit<Disbursement, 'disbursementId'>): Promise<string> {
     try {
       const disbursementsCollection = collection(this.firestore, 'disbursements');
       const disbursementData = {
@@ -1074,7 +1074,7 @@ export class FirestoreService {
     }
   }
 
-  async updateDisbursement(disbursementId: string, updates: any): Promise<void> {
+  async updateDisbursement(disbursementId: string, updates: Partial<Disbursement>): Promise<void> {
     try {
       const disbursementRef = doc(this.firestore, 'disbursements', disbursementId);
       await updateDoc(disbursementRef, {

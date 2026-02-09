@@ -88,7 +88,8 @@ export class GrnComponent implements OnInit {
     this.items.clear();
     
     this.selectedPO.items.forEach((item: PurchaseOrderItem) => {
-      const qtyOutstanding = item.quantityOrdered - item.quantityReceived;
+      const qtyReceived = item.quantityReceived ?? 0;
+      const qtyOutstanding = item.quantityOrdered - qtyReceived;
       
       this.items.push(this.fb.group({
         lineNumber: [this.items.length + 1],
@@ -97,7 +98,7 @@ export class GrnComponent implements OnInit {
         materialCode: [item.materialCode],
         materialName: [item.materialName],
         quantityOrdered: [item.quantityOrdered],
-        quantityPreviouslyReceived: [item.quantityReceived],
+        quantityPreviouslyReceived: [qtyReceived],
         quantityOutstanding: [qtyOutstanding],
         quantityReceived: [0, [Validators.required, Validators.min(0), Validators.max(qtyOutstanding)]],
         quantityRejected: [0, [Validators.min(0)]],
@@ -185,16 +186,19 @@ export class GrnComponent implements OnInit {
           materialId: control.get('materialId')?.value,
           materialCode: control.get('materialCode')?.value,
           materialName: control.get('materialName')?.value,
+          orderedQuantity: control.get('quantityOrdered')?.value,
           quantityOrdered: control.get('quantityOrdered')?.value,
+          receivedQuantity: control.get('quantityReceived')?.value || 0,
           quantityReceived: control.get('quantityReceived')?.value || 0,
           quantityRejected: control.get('quantityRejected')?.value || 0,
           unit: control.get('unit')?.value,
           unitCost: control.get('unitCost')?.value,
           lineTotal: (control.get('quantityReceived')?.value || 0) * control.get('unitCost')?.value,
           storageLocation: control.get('storageLocation')?.value,
-          conditionNotes: control.get('conditionNotes')?.value
+          conditionNotes: control.get('conditionNotes')?.value,
+          qualityStatus: 'Passed' as const
         }))
-        .filter(item => item.quantityReceived > 0); // Only include items with received quantity
+        .filter(item => (item.quantityReceived ?? 0) > 0); // Only include items with received quantity
 
       const grn: Omit<GoodsReceivedNote, 'grnId'> = {
         orgId,
@@ -226,7 +230,9 @@ export class GrnComponent implements OnInit {
       const updatedPOItems = this.selectedPO.items.map((poItem: any) => {
         const grnItem = grnItems.find(gi => gi.poLineNumber === poItem.lineNumber);
         if (grnItem) {
-          const newQtyReceived = poItem.quantityReceived + grnItem.quantityReceived;
+          const grnQty = grnItem.quantityReceived ?? grnItem.receivedQuantity;
+          const poQty = poItem.quantityReceived ?? 0;
+          const newQtyReceived = poQty + (grnQty ?? 0);
           return {
             ...poItem,
             quantityReceived: newQtyReceived,
@@ -238,7 +244,7 @@ export class GrnComponent implements OnInit {
 
       // Check if PO is fully received
       const allItemsReceived = updatedPOItems.every(
-        (item: any) => item.quantityReceived >= item.quantityOrdered
+        item => (item.quantityReceived ?? 0) >= item.quantityOrdered
       );
       const newPOStatus = allItemsReceived ? 'Closed' : 'Receiving';
 
@@ -252,15 +258,16 @@ export class GrnComponent implements OnInit {
       // Create inventory transactions for received items (only if quality check passed)
       if (formValue.qualityCheckStatus === 'Passed' || formValue.qualityCheckStatus === 'Partial') {
         for (const grnItem of grnItems) {
-          if (grnItem.quantityReceived > 0) {
+          const qtyReceived = grnItem.quantityReceived ?? grnItem.receivedQuantity;
+          if (qtyReceived && qtyReceived > 0) {
             const transaction: Omit<InventoryTransaction, 'transactionId' | 'transactionDate' | 'createdAt'> = {
               orgId,
-              siteId: this.selectedPO.siteId || '',
+              siteId: this.selectedPO.siteId || 'default-site',
               materialId: grnItem.materialId,
               transactionType: 'Adjustment',
-              quantity: grnItem.quantityReceived,
+              quantity: qtyReceived,
               previousStock: 0, // TODO: Get actual stock from inventory
-              newStock: grnItem.quantityReceived, // TODO: Calculate actual new stock
+              newStock: qtyReceived, // TODO: Calculate actual new stock
               reference: grnId,
               referenceType: 'PurchaseOrder',
               performedBy: currentUser,

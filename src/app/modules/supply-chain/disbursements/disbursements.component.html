@@ -311,7 +311,7 @@
             {{ disbursement.purpose }}
           </td>
           <td class="numeric font-semibold">
-            {{ formatCurrency(disbursement.totalCost) }}
+            {{ formatCurrency(disbursement.totalCost || 0) }}
           </td>
           <td>
             <span class="status-badge" [ngClass]="getStatusClass(disbursement.status)">

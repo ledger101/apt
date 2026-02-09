@@ -382,6 +382,183 @@ export interface InventoryTransaction {
   createdAt: Timestamp;
 }
 
+// ==================== SUPPLY CHAIN MODELS ====================
+
+export interface Project {
+  projectId: string;
+  orgId: string;
+  projectName: string;
+  projectCode: string;
+  description: string;
+  physicalAddress: string;
+  siteManager: string; // employee ID
+  siteManagerContact: string;
+  startDate: Timestamp;
+  expectedEndDate: Timestamp;
+  actualEndDate?: Timestamp;
+  status: 'Active' | 'Completed' | 'On Hold' | 'Cancelled';
+  totalBudget: number;
+  budgetConsumed?: number;
+  costCenterCode?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Supplier {
+  supplierId: string;
+  orgId: string;
+  companyName: string;
+  registrationNumber?: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  physicalAddress: string;
+  billingAddress?: string;
+  taxId?: string;
+  paymentTerms: string; // e.g., 'Net 30', 'COD'
+  averageLeadTimeDays?: number;
+  creditLimit?: number;
+  performanceRating?: number; // 1-5 scale
+  notes?: string;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface PurchaseOrderItem {
+  lineNumber?: number;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  quantity: number;
+  quantityOrdered: number; // Alias for quantity
+  quantityReceived?: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+  deliveredQuantity?: number;
+  status: 'Pending' | 'Partially Delivered' | 'Delivered' | 'Cancelled';
+  notes?: string;
+}
+
+export interface PurchaseOrder {
+  poId: string;
+  orgId: string;
+  supplierId: string;
+  supplierName?: string; // Denormalized for display
+  projectId: string;
+  siteId?: string;
+  poNumber: string; // Auto-generated (e.g., PO-2024-001)
+  status: 'Draft' | 'Sent' | 'Acknowledged' | 'Receiving' | 'Closed' | 'Cancelled';
+  orderDate: Timestamp;
+  expectedDeliveryDate: Timestamp;
+  actualDeliveryDate?: Timestamp;
+  paymentTerms: string;
+  currency: string; // Default: 'USD'
+  items: PurchaseOrderItem[];
+  subtotal: number;
+  taxPercent?: number;
+  taxAmount?: number;
+  shippingCost?: number;
+  discount?: number;
+  totalValue: number;
+  totalAmount?: number; // Alias for totalValue
+  requisitionId?: string; // Reference to originating requisition
+  requisitionIds?: string[]; // Alternative: array of requisition IDs
+  notes?: string;
+  deliveryInstructions?: string;
+  sentAt?: Timestamp; // When the PO was sent to supplier
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface GoodsReceivedItem {
+  lineNumber?: number;
+  poLineId?: string; // Reference to PurchaseOrderItem
+  poLineNumber?: number; // Line number from PO
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  orderedQuantity: number;
+  quantityOrdered?: number; // Alias for orderedQuantity
+  receivedQuantity: number;
+  quantityReceived?: number; // Alias for receivedQuantity
+  quantityRejected?: number;
+  unit: string;
+  unitCost?: number;
+  lineTotal?: number;
+  storageLocation?: string;
+  conditionNotes?: string;
+  qualityStatus: 'Passed' | 'Failed' | 'Pending';
+  discrepancyNotes?: string;
+}
+
+export interface GoodsReceivedNote {
+  grnId: string;
+  orgId: string;
+  poId: string; // Purchase order reference
+  supplierId?: string; // Denormalized from PO
+  poNumber?: string; // Denormalized for display
+  supplierName?: string; // Denormalized for display
+  projectId?: string; // Denormalized from PO
+  siteId?: string; // Denormalized from PO
+  grnNumber: string; // Auto-generated (e.g., GRN-2024-001)
+  dateReceived: Timestamp;
+  receivedBy: string; // employee ID
+  deliveryNoteRef?: string;
+  invoiceRef?: string;
+  qualityCheckStatus: 'Passed' | 'Failed' | 'Partial';
+  discrepancyNotes?: string;
+  items: GoodsReceivedItem[];
+  totalValue?: number;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface DisbursementItem {
+  lineNumber?: number;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  quantity: number; // Available quantity
+  unit: string;
+  unitCost?: number;
+  issuedQuantity: number;
+  quantityIssued?: number; // Alias for issuedQuantity
+  returnedQuantity?: number;
+  quantityReturned?: number; // Alias for returnedQuantity
+  totalCost?: number;
+  purpose: string;
+  notes?: string;
+}
+
+export interface Disbursement {
+  disbursementId: string;
+  orgId: string;
+  projectId: string;
+  siteId: string;
+  requisitionId?: string;
+  disbursementNumber: string; // Auto-generated (e.g., DISB-2024-001)
+  dateIssued: Timestamp;
+  issuedBy: string; // employee ID
+  receivedBy: string; // employee ID or name
+  purpose: string;
+  workOrderNumber?: string;
+  status: 'Issued' | 'Partially Returned' | 'Returned' | 'Closed';
+  items: DisbursementItem[];
+  totalCost?: number;
+  notes?: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface PreStartCheckItem {
   section: string;
   question: string;

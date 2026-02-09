@@ -266,11 +266,15 @@ export class DisbursementsComponent implements OnInit {
             materialId: material.materialId,
             materialCode: material.code,
             materialName: material.name,
+            quantity: material.currentStock || 0,
+            issuedQuantity: itemValue.quantityIssued,
             quantityIssued: itemValue.quantityIssued,
             unit: material.unit,
             unitCost: itemValue.unitCost,
             totalCost: itemValue.quantityIssued * itemValue.unitCost,
-            quantityReturned: 0
+            returnedQuantity: 0,
+            quantityReturned: 0,
+            purpose: formValue.purpose || ''
           });
         }
       }
@@ -303,9 +307,10 @@ export class DisbursementsComponent implements OnInit {
       // Update material stock levels and create inventory transactions
       for (const item of items) {
         const material = this.getMaterial(item.materialId);
-        if (material && material.currentStock !== undefined) {
+        const qtyIssued = item.quantityIssued ?? item.issuedQuantity;
+        if (material && material.currentStock !== undefined && qtyIssued) {
           const previousStock = material.currentStock;
-          const newStock = previousStock - item.quantityIssued;
+          const newStock = previousStock - qtyIssued;
 
           // Update material stock
           await this.supplyChainService.updateMaterial(item.materialId, {
@@ -319,7 +324,7 @@ export class DisbursementsComponent implements OnInit {
             siteId: formValue.siteId || formValue.projectId,
             materialId: item.materialId,
             transactionType: 'Issue',
-            quantity: -item.quantityIssued,
+            quantity: -qtyIssued,
             previousStock,
             newStock,
             reference: disbursementId,
@@ -353,8 +358,9 @@ export class DisbursementsComponent implements OnInit {
     // Update fulfilled quantities
     for (const disbursedItem of disbursedItems) {
       const reqItem = requisition.items.find(ri => ri.materialId === disbursedItem.materialId);
-      if (reqItem) {
-        reqItem.fulfilledQuantity += disbursedItem.quantityIssued;
+      const qtyIssued = disbursedItem.quantityIssued ?? disbursedItem.issuedQuantity;
+      if (reqItem && qtyIssued) {
+        reqItem.fulfilledQuantity += qtyIssued;
         
         if (reqItem.fulfilledQuantity >= reqItem.quantity) {
           reqItem.status = 'Fulfilled';
@@ -417,7 +423,7 @@ export class DisbursementsComponent implements OnInit {
   viewDisbursement(disbursement: Disbursement) {
     // Navigate to view/details page (if implemented)
     // For now, show alert with details
-    alert(`Disbursement Details:\n\nNumber: ${disbursement.disbursementNumber}\nProject: ${this.getProjectName(disbursement.projectId)}\nDate: ${this.formatDate(disbursement.dateIssued)}\nReceived By: ${disbursement.receivedBy}\nPurpose: ${disbursement.purpose}\nTotal Cost: ${this.formatCurrency(disbursement.totalCost)}\nStatus: ${disbursement.status}`);
+    alert(`Disbursement Details:\n\nNumber: ${disbursement.disbursementNumber}\nProject: ${this.getProjectName(disbursement.projectId)}\nDate: ${this.formatDate(disbursement.dateIssued)}\nReceived By: ${disbursement.receivedBy}\nPurpose: ${disbursement.purpose}\nTotal Cost: ${this.formatCurrency(disbursement.totalCost || 0)}\nStatus: ${disbursement.status}`);
   }
 
   getProjectName(projectId: string): string {
