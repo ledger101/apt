@@ -227,7 +227,7 @@ export class PurchaseOrdersComponent implements OnInit {
     });
 
     this.items.clear();
-    po.items.forEach(item => {
+    po.items.forEach((item: any) => {
       this.items.push(this.createLineItem(
         item.materialId,
         item.quantityOrdered,

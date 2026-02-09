@@ -73,6 +73,7 @@ export class ProjectsComponent implements OnInit {
   editProject(project: Project) {
     this.isEditing = true;
     this.editingProjectId = project.projectId;
+    
     this.projectForm.patchValue({
       projectName: project.projectName,
       projectCode: project.projectCode,
@@ -80,14 +81,25 @@ export class ProjectsComponent implements OnInit {
       physicalAddress: project.physicalAddress || '',
       siteManager: project.siteManager || '',
       siteManagerContact: project.siteManagerContact || '',
-      startDate: project.startDate?.toDate ? project.startDate.toDate().toISOString().split('T')[0] : '',
-      expectedEndDate: project.expectedEndDate?.toDate ? project.expectedEndDate.toDate().toISOString().split('T')[0] : '',
+      startDate: this.convertToDateString(project.startDate),
+      expectedEndDate: this.convertToDateString(project.expectedEndDate),
       status: project.status,
       totalBudget: project.totalBudget || 0,
       budgetConsumed: project.budgetConsumed || 0,
       costCenterCode: project.costCenterCode || ''
     });
     this.showForm = true;
+  }
+
+  private convertToDateString(date: any): string {
+    if (!date) return '';
+    if (date instanceof Date) {
+      return date.toISOString().split('T')[0];
+    }
+    if (date?.toDate) {
+      return date.toDate().toISOString().split('T')[0];
+    }
+    return '';
   }
 
   cancelEdit() {
