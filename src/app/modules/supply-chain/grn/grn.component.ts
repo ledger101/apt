@@ -192,7 +192,7 @@ export class GrnComponent implements OnInit {
           quantityReceived: control.get('quantityReceived')?.value || 0,
           quantityRejected: control.get('quantityRejected')?.value || 0,
           unit: control.get('unit')?.value,
-          unitCost: control.get('unitCost')?.value,
+          unitCost: control.get('unitCost')?.value || 0,
           lineTotal: (control.get('quantityReceived')?.value || 0) * (control.get('unitCost')?.value || 0),
           storageLocation: control.get('storageLocation')?.value,
           conditionNotes: control.get('conditionNotes')?.value,
