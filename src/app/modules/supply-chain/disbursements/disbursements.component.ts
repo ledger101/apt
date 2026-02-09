@@ -307,8 +307,8 @@ export class DisbursementsComponent implements OnInit {
       // Update material stock levels and create inventory transactions
       for (const item of items) {
         const material = this.getMaterial(item.materialId);
-        const qtyIssued = item.quantityIssued ?? item.issuedQuantity;
-        if (material && material.currentStock !== undefined && qtyIssued) {
+        const qtyIssued = item.quantityIssued ?? item.issuedQuantity ?? 0;
+        if (material && material.currentStock !== undefined && qtyIssued > 0) {
           const previousStock = material.currentStock;
           const newStock = previousStock - qtyIssued;
 
@@ -358,8 +358,8 @@ export class DisbursementsComponent implements OnInit {
     // Update fulfilled quantities
     for (const disbursedItem of disbursedItems) {
       const reqItem = requisition.items.find(ri => ri.materialId === disbursedItem.materialId);
-      const qtyIssued = disbursedItem.quantityIssued ?? disbursedItem.issuedQuantity;
-      if (reqItem && qtyIssued) {
+      const qtyIssued = disbursedItem.quantityIssued ?? disbursedItem.issuedQuantity ?? 0;
+      if (reqItem && qtyIssued > 0) {
         reqItem.fulfilledQuantity += qtyIssued;
         
         if (reqItem.fulfilledQuantity >= reqItem.quantity) {
