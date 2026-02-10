@@ -2,6 +2,8 @@
 
 This document describes how to build and deploy the APT application to Firebase Hosting.
 
+> **Quick Start**: For first-time setup, see [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for step-by-step instructions on configuring the Firebase service account.
+
 ## Overview
 
 The APT application is an Angular-based web application that is deployed to Firebase Hosting on the site `aptgeotech`.
@@ -14,14 +16,11 @@ The repository includes a GitHub Actions workflow (`.github/workflows/firebase-d
 
 #### Prerequisites
 
-To enable automated deployment, you need to configure a Firebase service account secret:
+To enable automated deployment, you need to configure a Firebase service account secret. See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for detailed setup instructions.
 
-1. Go to the [Firebase Console](https://console.firebase.google.com/)
-2. Select your project: `maze-ace`
-3. Go to Project Settings > Service Accounts
-4. Generate a new private key
-5. In your GitHub repository, go to Settings > Secrets and variables > Actions
-6. Add a new repository secret named `FIREBASE_SERVICE_ACCOUNT_MAZE_ACE` with the contents of the service account JSON file
+Quick summary:
+1. Generate a Firebase service account key from the Firebase Console
+2. Add it as a GitHub repository secret named `FIREBASE_SERVICE_ACCOUNT_MAZE_ACE`
 
 ### Triggering Deployment
 
