@@ -18,7 +18,6 @@ export class InvoiceConfigComponent implements OnInit {
   loading = false;
   error: string | null = null;
   success = false;
-  isAdmin = false;
 
   constructor(
     private invoiceConfigService: InvoiceConfigService,
