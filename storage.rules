@@ -14,7 +14,11 @@ service firebase.storage {
     // Allow authenticated users to upload and read files in the uploads folder
     match /uploads/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.resource.size < 50 * 1024 * 1024; // 50MB limit
+      allow write: if request.auth != null 
+                   && request.resource.size < 50 * 1024 * 1024 // 50MB limit
+                   && (request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') // .xlsx
+                       || request.resource.contentType.matches('text/csv') // .csv
+                       || request.resource.contentType.matches('application/octet-stream')); // .lev and other binary files
     }
 
     // Deny all other access

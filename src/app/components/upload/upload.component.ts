@@ -77,6 +77,10 @@ export class UploadComponent implements OnDestroy {
 
   private destroy$ = new Subject<void>();
 
+  // Constants for gamification
+  private readonly XP_SCALING_FACTOR = 1.5;
+  private readonly FILE_UPLOAD_PROGRESS_WEIGHT = 0.4;
+
   state: UploadState = {
     isDragging: false,
     selectedFiles: [],
@@ -476,7 +480,7 @@ export class UploadComponent implements OnDestroy {
                 }
                 
                 // Update overall progress
-                const fileProgressContribution = progress.percentage * 0.4 / validFiles.length;
+                const fileProgressContribution = progress.percentage * this.FILE_UPLOAD_PROGRESS_WEIGHT / validFiles.length;
                 this.state.uploadProgress = { 
                   stage: 'uploading-file', 
                   message: `☁️ Uploading file ${i + 1}/${validFiles.length}: ${progress.percentage}%`, 
@@ -912,7 +916,7 @@ export class UploadComponent implements OnDestroy {
     while (this.state.gamification.xp >= this.state.gamification.maxXp) {
       this.state.gamification.xp -= this.state.gamification.maxXp;
       this.state.gamification.level++;
-      this.state.gamification.maxXp = Math.floor(this.state.gamification.maxXp * 1.5);
+      this.state.gamification.maxXp = Math.floor(this.state.gamification.maxXp * this.XP_SCALING_FACTOR);
       this.state.gamification.showLevelUp = true;
       
       // Show level up notification
@@ -991,7 +995,6 @@ export class UploadComponent implements OnDestroy {
       const link = document.createElement('a');
       link.href = fileItem.downloadURL;
       link.download = fileItem.file.name;
-      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

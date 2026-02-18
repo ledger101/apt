@@ -37,7 +37,7 @@ export class FirebaseStorageService {
         });
       },
       (error) => {
-        console.error('Upload error:', error);
+        console.error(`Upload error for ${path}:`, error);
         progress$.error(error);
       },
       async () => {
@@ -51,6 +51,7 @@ export class FirebaseStorageService {
           });
           progress$.complete();
         } catch (error) {
+          console.error(`Failed to get download URL for ${path}:`, error);
           progress$.error(error);
         }
       }
