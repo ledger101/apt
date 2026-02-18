@@ -17,9 +17,23 @@ import { BaseChartDirective } from 'ng2-charts';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { ChartConfiguration, ChartType } from 'chart.js';
 
+interface FileUploadItem {
+  file: File;
+  status: 'pending' | 'parsing' | 'validating' | 'uploading' | 'success' | 'error';
+  progress: number;
+  error?: string;
+  parsedData?: Report | AquiferTest | DischargeTest | null;
+  validationResults?: ValidationResult;
+  detectedType?: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
+  site?: Site | null;
+  borehole?: Borehole | null;
+  series?: Series[];
+  quality?: Quality[];
+}
+
 interface UploadState {
   isDragging: boolean;
-  selectedFile: File | null;
+  selectedFiles: FileUploadItem[];
   isUploading: boolean;
   uploadProgress: { stage: string; message: string; percentage: number };
   validationResults: ValidationResult | null;
@@ -34,6 +48,7 @@ interface UploadState {
   success: boolean;
   activeTab: string;
   chartData: ChartConfiguration | null;
+  currentFileIndex: number;
 }
 
 
@@ -52,7 +67,7 @@ export class UploadComponent implements OnDestroy {
 
   state: UploadState = {
     isDragging: false,
-    selectedFile: null,
+    selectedFiles: [],
     isUploading: false,
     uploadProgress: { stage: 'parsing', message: 'Ready to upload', percentage: 0 },
     validationResults: null,
@@ -66,7 +81,8 @@ export class UploadComponent implements OnDestroy {
     error: null,
     success: false,
     activeTab: 'header',
-    chartData: null
+    chartData: null,
+    currentFileIndex: -1
   };
 
   // Allowed file types
@@ -144,7 +160,7 @@ export class UploadComponent implements OnDestroy {
 
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
-      this.handleFileSelection(files[0]);
+      this.handleFileSelection(Array.from(files));
     }
   }
 
@@ -152,12 +168,12 @@ export class UploadComponent implements OnDestroy {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.handleFileSelection(input.files[0]);
+      this.handleFileSelection(Array.from(input.files));
     }
   }
 
   // Handle file selection (from input or drop)
-  private handleFileSelection(file: File): void {
+  private handleFileSelection(files: File[]): void {
     // Reset previous state
     this.state.error = null;
     this.state.success = false;
@@ -165,15 +181,35 @@ export class UploadComponent implements OnDestroy {
     this.state.parsedData = null;
     this.state.showPreview = false;
 
-    // Validate file
-    const validation = this.validateFile(file);
-    if (!validation.isValid) {
-      this.state.error = validation.error || 'Invalid file';
-      this.state.selectedFile = null;
+    // Validate and add each file
+    const validFiles: FileUploadItem[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      const validation = this.validateFile(file);
+      if (validation.isValid) {
+        validFiles.push({
+          file,
+          status: 'pending',
+          progress: 0
+        });
+      } else {
+        errors.push(`${file.name}: ${validation.error}`);
+      }
+    }
+
+    // Show error message for rejected files
+    if (errors.length > 0 && validFiles.length > 0) {
+      // Some files valid, some invalid - show temporary warning
+      console.warn(`Some files were rejected:\n${errors.join('\n')}`);
+    } else if (errors.length > 0 && validFiles.length === 0) {
+      // All files invalid - show error
+      this.state.error = `All files were rejected:\n${errors.join('\n')}`;
+      this.state.selectedFiles = [];
       return;
     }
 
-    this.state.selectedFile = file;
+    this.state.selectedFiles = validFiles;
   }
 
   // Validate file type and size
@@ -198,10 +234,10 @@ export class UploadComponent implements OnDestroy {
     return { isValid: true };
   }
 
-  // Parse and validate the selected file
+  // Parse and validate the selected files
   async parseFile(): Promise<void> {
-    if (!this.state.selectedFile) {
-      this.state.error = 'No file selected';
+    if (this.state.selectedFiles.length === 0) {
+      this.state.error = 'No files selected';
       return;
     }
 
@@ -209,27 +245,245 @@ export class UploadComponent implements OnDestroy {
     this.state.error = null;
 
     try {
-      this.state.uploadProgress = { stage: 'parsing', message: 'Detecting template and parsing...', percentage: 20 };
+      // Process each file sequentially
+      for (let i = 0; i < this.state.selectedFiles.length; i++) {
+        const fileItem = this.state.selectedFiles[i];
+        this.state.currentFileIndex = i;
+        
+        fileItem.status = 'parsing';
+        this.state.uploadProgress = { 
+          stage: 'parsing', 
+          message: `Parsing file ${i + 1}/${this.state.selectedFiles.length}: ${fileItem.file.name}...`, 
+          percentage: Math.round(((i + 0.5) / this.state.selectedFiles.length) * 50)
+        };
 
-      const result = await this.excelParsingService.parseFile(this.state.selectedFile);
+        try {
+          const result = await this.excelParsingService.parseFile(fileItem.file);
 
-      this.state.uploadProgress = { stage: 'parsing', message: 'File parsed successfully', percentage: 60 };
+          fileItem.status = 'validating';
+          fileItem.progress = 80;
+          
+          // Store parsed data in the file item
+          fileItem.validationResults = result.validation;
+          fileItem.parsedData = result.data;
+          fileItem.detectedType = result.type;
+          fileItem.site = result.site;
+          fileItem.borehole = result.borehole;
+          fileItem.series = result.series || [];
+          fileItem.quality = result.quality || [];
 
-      // Extract data and validation
-      this.state.validationResults = result.validation;
-      this.state.parsedData = result.data;
-      this.state.detectedType = result.type;
-      this.state.site = result.site;
-      this.state.borehole = result.borehole;
-      this.state.series = result.series || [];
-      this.state.quality = result.quality || [];
-      this.state.uploadProgress = { stage: 'validating', message: 'Validation complete', percentage: 80 };
+          console.log(`File ${i + 1} - Detected type:`, result.type);
 
-      console.log('Detected type:', result.type);
-      console.log('Parsed data:', this.state.parsedData);
+          // Check if validation passed
+          if (!result.validation.isValid) {
+            fileItem.status = 'error';
+            fileItem.error = 'Validation failed. See errors below.';
+            fileItem.progress = 100;
+          } else {
+            fileItem.status = 'pending';
+            fileItem.progress = 100;
+          }
+
+        } catch (error: any) {
+          console.error(`Error parsing file ${fileItem.file.name}:`, error);
+          fileItem.status = 'error';
+          fileItem.error = error.message || 'Failed to parse file.';
+          fileItem.progress = 100;
+        }
+      }
+
+      this.state.uploadProgress = { 
+        stage: 'validating', 
+        message: 'All files parsed. Ready to upload.', 
+        percentage: 100 
+      };
+
+      // Show preview
+      this.state.showPreview = true;
+      this.state.isUploading = false;
+
+      // Set active file to first one for preview
+      if (this.state.selectedFiles.length > 0) {
+        this.setActiveFile(0);
+      }
+
+    } catch (error: any) {
+      console.error('Error during batch parsing:', error);
+      this.state.error = error.message || 'Failed to parse files.';
+      this.state.isUploading = false;
+      this.state.uploadProgress = { stage: 'error', message: 'Parsing failed', percentage: 0 };
+    }
+  }
+
+
+  // Confirm and save to Firestore
+  async confirmUpload(): Promise<void> {
+    // Get all valid files
+    const validFiles = this.state.selectedFiles.filter(
+      f => f.status === 'pending' && f.validationResults?.isValid && f.parsedData
+    );
+
+    if (validFiles.length === 0) {
+      this.state.error = 'No valid files to upload';
+      return;
+    }
+
+    this.state.isUploading = true;
+    this.state.error = null;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Process each valid file
+      for (let i = 0; i < validFiles.length; i++) {
+        const fileItem = validFiles[i];
+        this.state.currentFileIndex = this.state.selectedFiles.indexOf(fileItem);
+        
+        fileItem.status = 'uploading';
+        this.state.uploadProgress = { 
+          stage: 'saving', 
+          message: `Uploading file ${i + 1}/${validFiles.length}: ${fileItem.file.name}...`, 
+          percentage: Math.round((i / validFiles.length) * 100)
+        };
+
+        try {
+          // Save data based on type
+          if (this.isReport(fileItem.parsedData!)) {
+            const report = fileItem.parsedData as Report;
+            await this.firestoreService.saveReport(report);
+
+            // Generate invoice for the progress report
+            try {
+              const invoiceExists = await this.invoiceService.invoiceExistsForReport(report.reportId);
+
+              if (!invoiceExists) {
+                const config = await this.invoiceConfigService.getConfig(report.orgId);
+                const invoice = await this.invoiceService.generateInvoiceFromReport(report, config);
+                await this.invoiceService.saveInvoice(invoice);
+                await this.invoiceConfigService.incrementInvoiceNumber(report.orgId);
+                console.log('Invoice generated successfully:', invoice.invoiceNumber);
+              } else {
+                console.log('Invoice already exists for report:', report.reportId);
+              }
+            } catch (invoiceError: any) {
+              console.error('Error generating invoice:', invoiceError);
+            }
+          } else if (this.isAquiferTest(fileItem.parsedData!)) {
+            await this.firestoreService.saveAquiferTest(fileItem.parsedData as AquiferTest);
+          } else if (this.isDischargeTest(fileItem.parsedData!)) {
+            const test = fileItem.parsedData as DischargeTest;
+            const sourcePath = `uploads/${fileItem.file.name}`;
+            test.sourceFilePath = sourcePath;
+
+            if (fileItem.site && fileItem.borehole) {
+              await this.firestoreService.saveBoreholeData(
+                fileItem.site,
+                fileItem.borehole,
+                test
+              );
+
+              await this.firestoreService.saveSeriesData(
+                fileItem.site.siteId,
+                fileItem.borehole.boreholeNo,
+                fileItem.series || []
+              );
+
+              await this.firestoreService.saveQualityData(
+                fileItem.site.siteId,
+                fileItem.borehole.boreholeNo,
+                fileItem.quality || []
+              );
+
+              const totalPoints = (fileItem.series || []).reduce((sum, s) => sum + s.points.length, 0);
+              await this.firestoreService.saveParseJob({
+                jobId: `job-${Date.now()}`,
+                testRef: `sites/${fileItem.site.siteId}_${fileItem.borehole.boreholeNo}`,
+                status: 'parsed',
+                warnings: fileItem.validationResults?.warnings || [],
+                counts: {
+                  series: fileItem.series?.length || 0,
+                  points: totalPoints
+                },
+                sourceFilePath: sourcePath,
+                createdBy: 'user-id', // TODO: Get from Auth
+                createdAt: Timestamp.now()
+              });
+            }
+          }
+
+          fileItem.status = 'success';
+          fileItem.progress = 100;
+          successCount++;
+
+        } catch (error: any) {
+          console.error(`Error saving file ${fileItem.file.name}:`, error);
+          fileItem.status = 'error';
+          fileItem.error = error.message || 'Failed to save data';
+          fileItem.progress = 100;
+          errorCount++;
+        }
+      }
+
+      this.state.uploadProgress = { 
+        stage: 'complete', 
+        message: `Upload complete: ${successCount} succeeded, ${errorCount} failed`, 
+        percentage: 100 
+      };
+      this.state.isUploading = false;
+
+      // Show summary notification
+      if (errorCount === 0) {
+        this.state.success = true;
+        Swal.fire({
+          title: 'Success!',
+          text: `All ${successCount} file(s) have been successfully uploaded.`,
+          icon: 'success',
+          confirmButtonColor: '#3B82F6',
+          timer: 3000,
+          timerProgressBar: true
+        }).then(() => {
+          this.resetUpload();
+        });
+      } else {
+        Swal.fire({
+          title: 'Partial Success',
+          text: `${successCount} file(s) uploaded successfully, ${errorCount} failed.`,
+          icon: 'warning',
+          confirmButtonColor: '#3B82F6'
+        });
+      }
+
+    } catch (error: any) {
+      console.error('Error during batch upload:', error);
+      this.state.error = error.message || 'Failed to upload files';
+      this.state.isUploading = false;
+      this.state.uploadProgress = { stage: 'error', message: 'Upload failed', percentage: 0 };
+    }
+  }
+
+  // Set active preview tab
+  setActiveTab(tab: string): void {
+    this.state.activeTab = tab;
+  }
+
+  // Set active file for preview
+  setActiveFile(index: number): void {
+    if (index >= 0 && index < this.state.selectedFiles.length) {
+      this.state.currentFileIndex = index;
+      const fileItem = this.state.selectedFiles[index];
+      
+      // Update state with this file's data
+      this.state.validationResults = fileItem.validationResults || null;
+      this.state.parsedData = fileItem.parsedData || null;
+      this.state.detectedType = fileItem.detectedType || 'unknown';
+      this.state.site = fileItem.site || null;
+      this.state.borehole = fileItem.borehole || null;
+      this.state.series = fileItem.series || [];
+      this.state.quality = fileItem.quality || [];
 
       // Set default active tab based on data type
-      if (result.type === 'progress_report') {
+      if (fileItem.detectedType === 'progress_report') {
         this.state.activeTab = 'header';
       } else {
         this.state.activeTab = 'testDetails';
@@ -246,159 +500,27 @@ export class UploadComponent implements OnDestroy {
         console.error('Error creating chart:', chartError);
         this.state.chartData = null;
       }
-
-      // Check if validation passed (allow preview even with warnings, but not with errors)
-      if (!result.validation.isValid) {
-        this.state.error = 'Validation failed. Please review the errors below.';
-        this.state.isUploading = false;
-        this.state.showPreview = true;
-        return;
-      }
-
-      // Show preview for confirmation
-      this.state.showPreview = true;
-      this.state.isUploading = false;
-      this.state.uploadProgress = { stage: 'validating', message: 'Ready to save', percentage: 100 };
-
-    } catch (error: any) {
-      console.error('Error parsing file:', error);
-      this.state.error = error.message || 'Failed to parse file. Please ensure the file matches a supported template.';
-      this.state.isUploading = false;
-      this.state.uploadProgress = { stage: 'error', message: 'Parsing failed', percentage: 0 };
     }
   }
 
-
-  // Confirm and save to Firestore
-  async confirmUpload(): Promise<void> {
-    if (!this.state.parsedData || !this.state.validationResults?.isValid) {
-      this.state.error = 'Cannot save invalid data';
-      return;
+  // Remove a file from the selection
+  removeFile(index: number): void {
+    // Update currentFileIndex if needed
+    if (this.state.currentFileIndex === index) {
+      // If removing the active file, reset to -1
+      this.state.currentFileIndex = -1;
+    } else if (this.state.currentFileIndex > index) {
+      // If removing a file before the active one, decrement the index
+      this.state.currentFileIndex--;
     }
-
-    this.state.isUploading = true;
-    this.state.error = null;
-
-    try {
-      this.state.uploadProgress = { stage: 'saving', message: 'Saving to Firestore...', percentage: 80 };
-
-      // Save data based on type
-      if (this.isReport(this.state.parsedData)) {
-        // It's a Report
-        const report = this.state.parsedData as Report;
-        await this.firestoreService.saveReport(report);
-
-        // Generate invoice for the progress report
-        try {
-          this.state.uploadProgress = { stage: 'generating', message: 'Generating invoice...', percentage: 90 };
-
-          // Check if invoice already exists for this report
-          const invoiceExists = await this.invoiceService.invoiceExistsForReport(report.reportId);
-
-          if (!invoiceExists) {
-            // Get invoice configuration
-            const config = await this.invoiceConfigService.getConfig(report.orgId);
-
-            // Generate invoice
-            const invoice = await this.invoiceService.generateInvoiceFromReport(report, config);
-
-            // Save invoice
-            await this.invoiceService.saveInvoice(invoice);
-
-            // Increment invoice number for next invoice
-            await this.invoiceConfigService.incrementInvoiceNumber(report.orgId);
-
-            console.log('Invoice generated successfully:', invoice.invoiceNumber);
-          } else {
-            console.log('Invoice already exists for report:', report.reportId);
-          }
-        } catch (invoiceError: any) {
-          console.error('Error generating invoice:', invoiceError);
-          // Don't fail the upload if invoice generation fails
-          // Just log the error and continue
-        }
-      } else if (this.isAquiferTest(this.state.parsedData)) {
-        // It's an AquiferTest
-        await this.firestoreService.saveAquiferTest(this.state.parsedData as AquiferTest);
-      } else if (this.isDischargeTest(this.state.parsedData)) {
-        // It's a DischargeTest - save with site-based structure
-        const test = this.state.parsedData as DischargeTest;
-        const sourcePath = `uploads/${this.state.selectedFile?.name || 'unknown'}`;
-        test.sourceFilePath = sourcePath;
-
-        // Save using FLATTENED STRUCTURE (Site_BoreholeNo)
-        if (this.state.site && this.state.borehole) {
-          
-          // 1. Save Base Metadata Document
-          await this.firestoreService.saveBoreholeData(
-              this.state.site,
-              this.state.borehole,
-              test
-          );
-
-          // 2. Save Test Series with specific IDs
-          await this.firestoreService.saveSeriesData(
-            this.state.site.siteId,
-            this.state.borehole.boreholeNo,
-            this.state.series
-          );
-
-          // 3. Save Quality Data
-          await this.firestoreService.saveQualityData(
-            this.state.site.siteId,
-            this.state.borehole.boreholeNo,
-            this.state.quality
-          );
-
-          // Save parse job with updated reference
-          const totalPoints = this.state.series.reduce((sum, s) => sum + s.points.length, 0);
-          await this.firestoreService.saveParseJob({
-            jobId: `job-${Date.now()}`,
-            testRef: `sites/${this.state.site.siteId}_${this.state.borehole.boreholeNo}`,
-            status: 'parsed',
-            warnings: this.state.validationResults?.warnings || [],
-            counts: {
-              series: this.state.series.length,
-              points: totalPoints
-            },
-            sourceFilePath: sourcePath,
-            createdBy: 'user-id', // TODO: Get from Auth
-            createdAt: Timestamp.now()
-          });
-        }
-      }
-
-
-      this.state.uploadProgress = { stage: 'complete', message: 'Data saved successfully!', percentage: 100 };
-      this.state.success = true;
-      this.state.isUploading = false;
-
-      // Emit success event
-      this.dataUploaded.emit(this.state.parsedData);
-
-      // Notify user via Swal
-      Swal.fire({
-        title: 'Success!',
-        text: 'Data has been successfully uploaded and saved.',
-        icon: 'success',
-        confirmButtonColor: '#3B82F6',
-        timer: 3000,
-        timerProgressBar: true
-      }).then(() => {
-        this.resetUpload();
-      });
-
-    } catch (error: any) {
-      console.error('Error saving to Firestore:', error);
-      this.state.error = error.message || 'Failed to save data';
-      this.state.isUploading = false;
-      this.state.uploadProgress = { stage: 'error', message: 'Save failed', percentage: 0 };
+    
+    this.state.selectedFiles.splice(index, 1);
+    if (this.state.selectedFiles.length === 0) {
+      this.resetUpload();
+    } else if (this.state.showPreview && this.state.currentFileIndex === -1) {
+      // If in preview mode and no active file, set to first file
+      this.setActiveFile(0);
     }
-  }
-
-  // Set active preview tab
-  setActiveTab(tab: string): void {
-    this.state.activeTab = tab;
   }
 
   // Cancel preview and go back to file selection
@@ -413,7 +535,7 @@ export class UploadComponent implements OnDestroy {
   resetUpload(): void {
     this.state = {
       isDragging: false,
-      selectedFile: null,
+      selectedFiles: [],
       isUploading: false,
       uploadProgress: { stage: 'parsing', message: 'Ready to upload', percentage: 0 },
       validationResults: null,
@@ -427,7 +549,8 @@ export class UploadComponent implements OnDestroy {
       error: null,
       success: false,
       activeTab: 'header',
-      chartData: null
+      chartData: null,
+      currentFileIndex: -1
     };
   }
 
@@ -438,6 +561,30 @@ export class UploadComponent implements OnDestroy {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  // Get status badge class for file item
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'success': return 'bg-green-100 text-green-800';
+      case 'error': return 'bg-red-100 text-red-800';
+      case 'uploading': return 'bg-blue-100 text-blue-800';
+      case 'parsing': return 'bg-yellow-100 text-yellow-800';
+      case 'validating': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  // Get status icon for file item
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'success': return '✓';
+      case 'error': return '✗';
+      case 'uploading': return '↑';
+      case 'parsing': return '⟳';
+      case 'validating': return '◉';
+      default: return '○';
+    }
   }
 
   // Get progress bar color based on stage
