@@ -11,6 +11,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { ExcelParsingService } from '../../services/excel-parsing.service';
 import { LevParsingService } from '../../services/lev-parsing.service';
 import { FirestoreService } from '../../services/firestore.service';
+import { FirebaseStorageService } from '../../services/firebase-storage.service';
 import { InvoiceService } from '../../services/invoice.service';
 import { InvoiceConfigService } from '../../services/invoice-config.service';
 import { Report, ValidationResult, AquiferTest, DischargeTest, Site, Borehole, Series, Quality } from '../../models';
@@ -20,8 +21,9 @@ import { ChartConfiguration, ChartType } from 'chart.js';
 
 interface FileUploadItem {
   file: File;
-  status: 'pending' | 'parsing' | 'validating' | 'uploading' | 'success' | 'error';
+  status: 'pending' | 'parsing' | 'validating' | 'uploading' | 'uploading-file' | 'success' | 'error';
   progress: number;
+  fileUploadProgress?: number;
   error?: string;
   parsedData?: Report | AquiferTest | DischargeTest | null;
   validationResults?: ValidationResult;
@@ -30,13 +32,15 @@ interface FileUploadItem {
   borehole?: Borehole | null;
   series?: Series[];
   quality?: Quality[];
+  downloadURL?: string;
+  storagePath?: string;
 }
 
 interface UploadState {
   isDragging: boolean;
   selectedFiles: FileUploadItem[];
   isUploading: boolean;
-  uploadProgress: { stage: string; message: string; percentage: number };
+  uploadProgress: { stage: string; message: string; percentage: number; level?: number; xp?: number };
   validationResults: ValidationResult | null;
   parsedData: Report | AquiferTest | DischargeTest | null;
   detectedType: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'data_logger' | 'unknown';
@@ -50,6 +54,13 @@ interface UploadState {
   activeTab: string;
   chartData: ChartConfiguration | null;
   currentFileIndex: number;
+  gamification: {
+    level: number;
+    xp: number;
+    maxXp: number;
+    achievements: string[];
+    showLevelUp: boolean;
+  };
 }
 
 
@@ -83,7 +94,14 @@ export class UploadComponent implements OnDestroy {
     success: false,
     activeTab: 'header',
     chartData: null,
-    currentFileIndex: -1
+    currentFileIndex: -1,
+    gamification: {
+      level: 1,
+      xp: 0,
+      maxXp: 100,
+      achievements: [],
+      showLevelUp: false
+    }
   };
 
   // Allowed file types
@@ -95,6 +113,7 @@ export class UploadComponent implements OnDestroy {
     private excelParsingService: ExcelParsingService,
     private levParsingService: LevParsingService,
     private firestoreService: FirestoreService,
+    private storageService: FirebaseStorageService,
     private invoiceService: InvoiceService,
     private invoiceConfigService: InvoiceConfigService,
     private router: Router
@@ -353,10 +372,16 @@ export class UploadComponent implements OnDestroy {
         this.state.currentFileIndex = this.state.selectedFiles.indexOf(fileItem);
         
         fileItem.status = 'uploading';
+        
+        // Gamification: Add XP for starting upload
+        this.addXP(10, '🚀 Upload Started!');
+        
         this.state.uploadProgress = { 
           stage: 'saving', 
-          message: `Uploading file ${i + 1}/${validFiles.length}: ${fileItem.file.name}...`, 
-          percentage: Math.round((i / validFiles.length) * 100)
+          message: `💾 Saving data ${i + 1}/${validFiles.length}: ${fileItem.file.name}...`, 
+          percentage: Math.round((i / validFiles.length) * 40),
+          level: this.state.gamification.level,
+          xp: this.state.gamification.xp
         };
 
         try {
@@ -424,6 +449,53 @@ export class UploadComponent implements OnDestroy {
             }
           }
 
+          // Gamification: Add XP for data saved
+          this.addXP(30, '📊 Data Saved!');
+
+          // Upload file to Firebase Storage
+          fileItem.status = 'uploading-file';
+          const timestamp = Date.now();
+          const storagePath = `uploads/${timestamp}-${fileItem.file.name}`;
+          fileItem.storagePath = storagePath;
+
+          this.state.uploadProgress = { 
+            stage: 'uploading-file', 
+            message: `☁️ Uploading file ${i + 1}/${validFiles.length} to cloud storage...`, 
+            percentage: Math.round((i / validFiles.length) * 60 + 40),
+            level: this.state.gamification.level,
+            xp: this.state.gamification.xp
+          };
+
+          // Upload file with progress tracking
+          await new Promise<void>((resolve, reject) => {
+            this.storageService.uploadFile(fileItem.file, storagePath).subscribe({
+              next: (progress) => {
+                fileItem.fileUploadProgress = progress.percentage;
+                if (progress.downloadURL) {
+                  fileItem.downloadURL = progress.downloadURL;
+                }
+                
+                // Update overall progress
+                const fileProgressContribution = progress.percentage * 0.4 / validFiles.length;
+                this.state.uploadProgress = { 
+                  stage: 'uploading-file', 
+                  message: `☁️ Uploading file ${i + 1}/${validFiles.length}: ${progress.percentage}%`, 
+                  percentage: Math.round((i / validFiles.length) * 60 + 40 + fileProgressContribution),
+                  level: this.state.gamification.level,
+                  xp: this.state.gamification.xp
+                };
+              },
+              error: (error) => reject(error),
+              complete: () => resolve()
+            });
+          });
+
+          // Gamification: Add XP for file uploaded
+          this.addXP(40, '☁️ File Uploaded!');
+          
+          // Check for achievements
+          this.checkAchievements(successCount + 1);
+
           fileItem.status = 'success';
           fileItem.progress = 100;
           successCount++;
@@ -439,20 +511,36 @@ export class UploadComponent implements OnDestroy {
 
       this.state.uploadProgress = { 
         stage: 'complete', 
-        message: `Upload complete: ${successCount} succeeded, ${errorCount} failed`, 
-        percentage: 100 
+        message: `🎉 Upload complete: ${successCount} succeeded, ${errorCount} failed`, 
+        percentage: 100,
+        level: this.state.gamification.level,
+        xp: this.state.gamification.xp
       };
       this.state.isUploading = false;
+
+      // Gamification: Bonus XP for completing all uploads
+      if (errorCount === 0) {
+        this.addXP(50, '🏆 Perfect Upload!');
+      }
 
       // Show summary notification
       if (errorCount === 0) {
         this.state.success = true;
         Swal.fire({
-          title: 'Success!',
-          text: `All ${successCount} file(s) have been successfully uploaded.`,
+          title: '🎉 Success!',
+          html: `All ${successCount} file(s) have been successfully uploaded.<br><br>` +
+                `<div class="text-left mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">` +
+                `<div class="text-lg font-bold text-purple-700">Level ${this.state.gamification.level} 🎮</div>` +
+                `<div class="text-sm text-gray-600 mt-1">XP: ${this.state.gamification.xp}/${this.state.gamification.maxXp}</div>` +
+                `<div class="mt-2">` +
+                `<div class="w-full bg-gray-200 rounded-full h-2.5">` +
+                `<div class="bg-gradient-to-r from-blue-500 to-purple-600 h-2.5 rounded-full" style="width: ${(this.state.gamification.xp / this.state.gamification.maxXp) * 100}%"></div>` +
+                `</div>` +
+                `</div>` +
+                `</div>`,
           icon: 'success',
           confirmButtonColor: '#3B82F6',
-          timer: 3000,
+          timer: 5000,
           timerProgressBar: true
         }).then(() => {
           this.resetUpload();
@@ -562,7 +650,8 @@ export class UploadComponent implements OnDestroy {
       success: false,
       activeTab: 'header',
       chartData: null,
-      currentFileIndex: -1
+      currentFileIndex: -1,
+      gamification: this.state.gamification // Preserve gamification state
     };
   }
 
@@ -581,6 +670,7 @@ export class UploadComponent implements OnDestroy {
       case 'success': return 'bg-green-100 text-green-800';
       case 'error': return 'bg-red-100 text-red-800';
       case 'uploading': return 'bg-blue-100 text-blue-800';
+      case 'uploading-file': return 'bg-indigo-100 text-indigo-800';
       case 'parsing': return 'bg-yellow-100 text-yellow-800';
       case 'validating': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -593,6 +683,7 @@ export class UploadComponent implements OnDestroy {
       case 'success': return '✓';
       case 'error': return '✗';
       case 'uploading': return '↑';
+      case 'uploading-file': return '☁️';
       case 'parsing': return '⟳';
       case 'validating': return '◉';
       default: return '○';
@@ -811,6 +902,116 @@ export class UploadComponent implements OnDestroy {
         }
       }
     };
+  }
+
+  // Gamification: Add XP and check for level up
+  private addXP(amount: number, message: string): void {
+    this.state.gamification.xp += amount;
+    
+    // Check for level up
+    while (this.state.gamification.xp >= this.state.gamification.maxXp) {
+      this.state.gamification.xp -= this.state.gamification.maxXp;
+      this.state.gamification.level++;
+      this.state.gamification.maxXp = Math.floor(this.state.gamification.maxXp * 1.5);
+      this.state.gamification.showLevelUp = true;
+      
+      // Show level up notification
+      setTimeout(() => {
+        Swal.fire({
+          title: '🎉 Level Up!',
+          html: `<div class="text-center">` +
+                `<div class="text-6xl mb-4">🌟</div>` +
+                `<div class="text-3xl font-bold text-purple-700">Level ${this.state.gamification.level}</div>` +
+                `<div class="text-gray-600 mt-2">You're getting better at this!</div>` +
+                `</div>`,
+          icon: 'success',
+          confirmButtonColor: '#8B5CF6',
+          timer: 3000,
+          showClass: {
+            popup: 'animate__animated animate__bounceIn'
+          }
+        });
+        this.state.gamification.showLevelUp = false;
+      }, 500);
+    }
+  }
+
+  // Check for achievements
+  private checkAchievements(uploadCount: number): void {
+    const achievements = [];
+    
+    if (uploadCount === 1 && !this.state.gamification.achievements.includes('first_upload')) {
+      achievements.push({ id: 'first_upload', title: '🎯 First Upload', description: 'Uploaded your first file!' });
+      this.state.gamification.achievements.push('first_upload');
+    }
+    
+    if (uploadCount === 5 && !this.state.gamification.achievements.includes('five_uploads')) {
+      achievements.push({ id: 'five_uploads', title: '🔥 On Fire', description: 'Uploaded 5 files!' });
+      this.state.gamification.achievements.push('five_uploads');
+    }
+    
+    if (uploadCount === 10 && !this.state.gamification.achievements.includes('ten_uploads')) {
+      achievements.push({ id: 'ten_uploads', title: '💎 Expert Uploader', description: 'Uploaded 10 files!' });
+      this.state.gamification.achievements.push('ten_uploads');
+    }
+    
+    // Show achievement notification
+    if (achievements.length > 0) {
+      setTimeout(() => {
+        achievements.forEach(achievement => {
+          Swal.fire({
+            title: achievement.title,
+            text: achievement.description,
+            icon: 'success',
+            confirmButtonColor: '#F59E0B',
+            timer: 2500,
+            showClass: {
+              popup: 'animate__animated animate__fadeInDown'
+            }
+          });
+        });
+      }, 1000);
+    }
+  }
+
+  // Download uploaded file
+  async downloadFile(fileItem: FileUploadItem): Promise<void> {
+    if (!fileItem.downloadURL) {
+      Swal.fire({
+        title: 'Error',
+        text: 'No download URL available for this file.',
+        icon: 'error',
+        confirmButtonColor: '#3B82F6'
+      });
+      return;
+    }
+
+    try {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = fileItem.downloadURL;
+      link.download = fileItem.file.name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      Swal.fire({
+        title: 'Download Started',
+        text: `Downloading ${fileItem.file.name}...`,
+        icon: 'success',
+        confirmButtonColor: '#3B82F6',
+        timer: 2000
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      Swal.fire({
+        title: 'Download Failed',
+        text: error.message || 'Failed to download file.',
+        icon: 'error',
+        confirmButtonColor: '#3B82F6'
+      });
+    }
   }
 
   navigateToDashboard(): void {
