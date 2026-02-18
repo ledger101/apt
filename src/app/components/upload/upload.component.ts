@@ -189,7 +189,7 @@ export class UploadComponent implements OnDestroy {
       const validation = this.validateFile(file);
       if (validation.isValid) {
         validFiles.push({
-          file: file,
+          file,
           status: 'pending',
           progress: 0
         });
@@ -198,11 +198,13 @@ export class UploadComponent implements OnDestroy {
       }
     }
 
-    if (errors.length > 0) {
-      this.state.error = `Some files were rejected:\n${errors.join('\n')}`;
-    }
-
-    if (validFiles.length === 0 && errors.length > 0) {
+    // Show error message for rejected files
+    if (errors.length > 0 && validFiles.length > 0) {
+      // Some files valid, some invalid - show temporary warning
+      console.warn(`Some files were rejected:\n${errors.join('\n')}`);
+    } else if (errors.length > 0 && validFiles.length === 0) {
+      // All files invalid - show error
+      this.state.error = `All files were rejected:\n${errors.join('\n')}`;
       this.state.selectedFiles = [];
       return;
     }
@@ -252,7 +254,7 @@ export class UploadComponent implements OnDestroy {
         this.state.uploadProgress = { 
           stage: 'parsing', 
           message: `Parsing file ${i + 1}/${this.state.selectedFiles.length}: ${fileItem.file.name}...`, 
-          percentage: Math.round((i / this.state.selectedFiles.length) * 50)
+          percentage: Math.round(((i + 0.5) / this.state.selectedFiles.length) * 50)
         };
 
         try {
@@ -404,7 +406,7 @@ export class UploadComponent implements OnDestroy {
                   points: totalPoints
                 },
                 sourceFilePath: sourcePath,
-                createdBy: 'user-id',
+                createdBy: 'user-id', // TODO: Get from Auth
                 createdAt: Timestamp.now()
               });
             }
@@ -493,8 +495,6 @@ export class UploadComponent implements OnDestroy {
           this.state.chartData = this.createChartData(this.state.parsedData as AquiferTest);
         } else if (this.isDischargeTest(this.state.parsedData) && this.state.series.length > 0) {
           this.state.chartData = this.createDischargeChart(this.state.series);
-        } else {
-          this.state.chartData = null;
         }
       } catch (chartError: any) {
         console.error('Error creating chart:', chartError);
@@ -505,9 +505,21 @@ export class UploadComponent implements OnDestroy {
 
   // Remove a file from the selection
   removeFile(index: number): void {
+    // Update currentFileIndex if needed
+    if (this.state.currentFileIndex === index) {
+      // If removing the active file, reset to -1
+      this.state.currentFileIndex = -1;
+    } else if (this.state.currentFileIndex > index) {
+      // If removing a file before the active one, decrement the index
+      this.state.currentFileIndex--;
+    }
+    
     this.state.selectedFiles.splice(index, 1);
     if (this.state.selectedFiles.length === 0) {
       this.resetUpload();
+    } else if (this.state.showPreview && this.state.currentFileIndex === -1) {
+      // If in preview mode and no active file, set to first file
+      this.setActiveFile(0);
     }
   }
 
