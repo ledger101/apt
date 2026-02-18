@@ -297,7 +297,7 @@ export class LevParsingService {
     try {
       // Format: YYYY/MM/DD HH:MM:SS.S
       const [year, month, day] = datePart.split('/').map(Number);
-      const [time, _] = timePart.split('.');
+      const time = timePart.split('.')[0];
       const [hours, minutes, seconds] = time.split(':').map(Number);
       
       return new Date(year, month - 1, day, hours, minutes, seconds || 0);
