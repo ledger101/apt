@@ -9,6 +9,7 @@ import { GlobalErrorHandler } from './services/error-handler/global-error-handle
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
+import { getStorage, provideStorage } from '@angular/fire/storage';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -34,6 +35,7 @@ export const appConfig: ApplicationConfig = {
       // Suppress the injection context warning
       (firestore as any)._firestoreClient = (firestore as any)._firestoreClient;
       return firestore;
-    })
+    }),
+    provideStorage(() => getStorage())
   ]
 };
