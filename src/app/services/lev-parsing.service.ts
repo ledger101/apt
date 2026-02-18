@@ -115,8 +115,8 @@ export class LevParsingService {
         testId: `test-${Date.now()}`,
         testType: 'constant_discharge',
         boreholeRef: `sites/${site.siteId}/boreholes/${borehole.boreholeNo}`,
-        startTime: startTime || undefined,
-        endTime: endTime || undefined,
+        startTime: startTime,
+        endTime: endTime,
         summary: {},
         sourceFilePath: file.name,
         status: 'parsed',
@@ -329,7 +329,7 @@ export class LevParsingService {
    * Parse a date/time string and validate it
    */
   private parseDateTime(dateTimeStr: string): Date | undefined {
-    if (!dateTimeStr || typeof dateTimeStr !== 'string') {
+    if (!dateTimeStr) {
       return undefined;
     }
     
