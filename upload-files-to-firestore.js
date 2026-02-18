@@ -17,7 +17,7 @@ const XLSX = require('xlsx');
 const admin = require('firebase-admin');
 
 // Check for dry-run mode
-const DRY_RUN = process.argv.includes('--dry-run');
+let DRY_RUN = process.argv.includes('--dry-run');
 
 // Initialize Firebase Admin (skip in dry-run mode)
 if (!DRY_RUN) {
@@ -37,19 +37,12 @@ if (!DRY_RUN) {
     } else {
       console.log('⚠️  Warning: No Firebase credentials found. Running in dry-run mode...');
       console.log('    Use --dry-run flag to suppress this warning\n');
-      process.argv.push('--dry-run');
-      // Re-check DRY_RUN flag
-      if (!DRY_RUN) {
-        // Force dry run mode
-        throw new Error('No credentials - switching to dry-run mode');
-      }
+      DRY_RUN = true; // Enable dry-run mode
     }
   } catch (error) {
-    if (!DRY_RUN) {
-      console.error('Failed to initialize Firebase:', error.message);
-      console.log('Continuing in dry-run mode...\n');
-      process.argv.push('--dry-run');
-    }
+    console.error('Failed to initialize Firebase:', error.message);
+    console.log('Continuing in dry-run mode...\n');
+    DRY_RUN = true; // Enable dry-run mode on error
   }
 }
 
@@ -59,6 +52,20 @@ const db = DRY_RUN ? null : admin.firestore();
 const DRIVE_FOLDER = path.join(__dirname, 'drive');
 const LOG_FILE = path.join(__dirname, 'upload-errors.log');
 const SUCCESS_LOG = path.join(__dirname, 'upload-success.log');
+
+// Configurable parsing ranges
+const PARSE_CONFIG = {
+  steppedDischarge: {
+    dataStartRow: 17,
+    dataEndRow: 40,
+    maxDataRows: 100 // Maximum rows to scan for data
+  },
+  constantDischarge: {
+    dataStartRow: 16,
+    dataEndRow: 150,
+    maxDataRows: 200 // Maximum rows to scan for data
+  }
+};
 
 // Statistics
 const stats = {
@@ -169,7 +176,7 @@ function parseSteppedDischarge(workbook, filePath) {
     type: 'stepped_discharge',
     fileName: path.basename(filePath),
     filePath: filePath,
-    uploadedAt: admin.firestore.Timestamp.now(),
+    uploadedAt: DRY_RUN ? new Date().toISOString() : admin.firestore.Timestamp.now(),
     metadata: {
       projectNo: getCellValue(sheet, 'C5'),
       boreholeNo: getCellValue(sheet, 'C6'),
@@ -202,8 +209,11 @@ function parseSteppedDischarge(workbook, filePath) {
     dataPoints: []
   };
   
-  // Read data rows (simplified example)
-  for (let row = 17; row <= 40; row++) {
+  // Read data rows (using configurable range)
+  const startRow = PARSE_CONFIG.steppedDischarge.dataStartRow;
+  const endRow = PARSE_CONFIG.steppedDischarge.dataEndRow;
+  
+  for (let row = startRow; row <= endRow; row++) {
     const time = getCellValue(sheet, `A${row}`);
     const wl = getCellValue(sheet, `B${row}`);
     const ddn = getCellValue(sheet, `C${row}`);
@@ -229,7 +239,7 @@ function parseConstantDischarge(workbook, filePath) {
     type: 'constant_discharge',
     fileName: path.basename(filePath),
     filePath: filePath,
-    uploadedAt: admin.firestore.Timestamp.now(),
+    uploadedAt: DRY_RUN ? new Date().toISOString() : admin.firestore.Timestamp.now(),
     metadata: {
       boreholeNo: getCellValue(sheet, 'C3'),
       siteName: getCellValue(sheet, 'P4'),
@@ -254,8 +264,11 @@ function parseConstantDischarge(workbook, filePath) {
     }
   };
   
-  // Parse discharge data
-  for (let row = 16; row <= 150; row++) {
+  // Parse discharge data (using configurable range)
+  const startRow = PARSE_CONFIG.constantDischarge.dataStartRow;
+  const endRow = PARSE_CONFIG.constantDischarge.dataEndRow;
+  
+  for (let row = startRow; row <= endRow; row++) {
     const time = getCellValue(sheet, `A${row}`);
     const wl = getCellValue(sheet, `B${row}`);
     const ddn = getCellValue(sheet, `C${row}`);
