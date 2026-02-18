@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 // import { DataUploadService, UploadProgress } from '../../services/data-upload.service';
 import { ExcelParsingService } from '../../services/excel-parsing.service';
+import { LevParsingService } from '../../services/lev-parsing.service';
 import { FirestoreService } from '../../services/firestore.service';
 import { InvoiceService } from '../../services/invoice.service';
 import { InvoiceConfigService } from '../../services/invoice-config.service';
@@ -24,7 +25,7 @@ interface FileUploadItem {
   error?: string;
   parsedData?: Report | AquiferTest | DischargeTest | null;
   validationResults?: ValidationResult;
-  detectedType?: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
+  detectedType?: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'data_logger' | 'unknown';
   site?: Site | null;
   borehole?: Borehole | null;
   series?: Series[];
@@ -38,7 +39,7 @@ interface UploadState {
   uploadProgress: { stage: string; message: string; percentage: number };
   validationResults: ValidationResult | null;
   parsedData: Report | AquiferTest | DischargeTest | null;
-  detectedType: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'unknown';
+  detectedType: 'progress_report' | 'stepped_discharge' | 'constant_discharge' | 'data_logger' | 'unknown';
   site: Site | null;
   borehole: Borehole | null;
   series: Series[];
@@ -86,12 +87,13 @@ export class UploadComponent implements OnDestroy {
   };
 
   // Allowed file types
-  readonly ALLOWED_EXTENSIONS = ['.xlsx', '.csv'];
+  readonly ALLOWED_EXTENSIONS = ['.xlsx', '.csv', '.lev'];
   readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   constructor(
     // private dataUploadService: DataUploadService,
     private excelParsingService: ExcelParsingService,
+    private levParsingService: LevParsingService,
     private firestoreService: FirestoreService,
     private invoiceService: InvoiceService,
     private invoiceConfigService: InvoiceConfigService,
@@ -258,7 +260,17 @@ export class UploadComponent implements OnDestroy {
         };
 
         try {
-          const result = await this.excelParsingService.parseFile(fileItem.file);
+          // Determine file type and use appropriate parser
+          const fileExtension = '.' + fileItem.file.name.split('.').pop()?.toLowerCase();
+          let result;
+          
+          if (fileExtension === '.lev') {
+            // Use LEV parsing service for .lev files
+            result = await this.levParsingService.parseFile(fileItem.file);
+          } else {
+            // Use Excel parsing service for .xlsx and .csv files
+            result = await this.excelParsingService.parseFile(fileItem.file);
+          }
 
           fileItem.status = 'validating';
           fileItem.progress = 80;
