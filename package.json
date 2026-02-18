@@ -5,8 +5,10 @@
     "ng": "ng",
     "start": "ng serve --port 5555 -o",
     "build": "ng build",
+    "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "deploy": "npm run build:prod && firebase deploy --only hosting:aptgeotech"
   },
   "prettier": {
     "overrides": [
@@ -50,6 +52,7 @@
     "@angular/compiler-cli": "^20.0.0",
     "@types/jasmine": "~5.1.0",
     "autoprefixer": "^10.4.21",
+    "firebase-tools": "^14.0.0",
     "jasmine-core": "~5.7.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
