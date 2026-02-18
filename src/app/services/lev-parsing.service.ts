@@ -98,13 +98,25 @@ export class LevParsingService {
       // Convert data rows to series
       const series: Series[] = this.convertToSeries(parsed.dataRows, metadata);
       
+      // Parse and validate dates
+      const startTime = this.parseDateTime(metadata.startTime || '');
+      const endTime = this.parseDateTime(metadata.stopTime || '');
+      
+      // Add validation warnings for invalid dates
+      if (metadata.startTime && !startTime) {
+        validation.warnings.push(`Invalid start time format: ${metadata.startTime}`);
+      }
+      if (metadata.stopTime && !endTime) {
+        validation.warnings.push(`Invalid stop time format: ${metadata.stopTime}`);
+      }
+      
       // Create discharge test data structure
       const dischargeTest: DischargeTest = {
         testId: `test-${Date.now()}`,
         testType: 'constant_discharge',
         boreholeRef: `sites/${site.siteId}/boreholes/${borehole.boreholeNo}`,
-        startTime: metadata.startTime ? new Date(metadata.startTime) : new Date(),
-        endTime: metadata.stopTime ? new Date(metadata.stopTime) : undefined,
+        startTime: startTime || undefined,
+        endTime: endTime || undefined,
         summary: {},
         sourceFilePath: file.name,
         status: 'parsed',
@@ -300,9 +312,38 @@ export class LevParsingService {
       const time = timePart.split('.')[0];
       const [hours, minutes, seconds] = time.split(':').map(Number);
       
-      return new Date(year, month - 1, day, hours, minutes, seconds || 0);
+      const date = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+      
+      // Validate the date object
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      
+      return date;
     } catch {
       return null;
+    }
+  }
+  
+  /**
+   * Parse a date/time string and validate it
+   */
+  private parseDateTime(dateTimeStr: string): Date | undefined {
+    if (!dateTimeStr || typeof dateTimeStr !== 'string') {
+      return undefined;
+    }
+    
+    try {
+      const date = new Date(dateTimeStr);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return undefined;
+      }
+      
+      return date;
+    } catch {
+      return undefined;
     }
   }
 

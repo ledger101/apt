@@ -25,6 +25,30 @@ export class FirestoreService {
   constructor(private firestore: Firestore) {
     console.log('FirestoreService initialized for pumping reports');
   }
+  
+  /**
+   * Helper function to check if a Date object is valid
+   */
+  private isValidDate(date: any): date is Date {
+    return date instanceof Date && !isNaN(date.getTime());
+  }
+  
+  /**
+   * Helper function to safely convert a Date to a Timestamp
+   * Returns null if the date is invalid
+   */
+  private safeTimestampFromDate(date: Date | undefined | null): Timestamp | null {
+    if (!date) {
+      return null;
+    }
+    
+    if (!this.isValidDate(date)) {
+      console.warn('Invalid date encountered, skipping conversion to Timestamp:', date);
+      return null;
+    }
+    
+    return Timestamp.fromDate(date);
+  }
 
   // ==================== PUMPING REPORTS ====================
 
@@ -225,8 +249,8 @@ export class FirestoreService {
         testId: test.testId,
         testType: test.testType,
         testSummary: test.summary,
-        testStartTime: test.startTime ? Timestamp.fromDate(test.startTime) : null,
-        testEndTime: test.endTime ? Timestamp.fromDate(test.endTime) : null,
+        testStartTime: this.safeTimestampFromDate(test.startTime),
+        testEndTime: this.safeTimestampFromDate(test.endTime),
         sourceFilePath: test.sourceFilePath,
 
         updatedAt: Timestamp.now(),
@@ -340,8 +364,8 @@ export class FirestoreService {
       const testDocRef = doc(this.firestore, `sites/${siteId}/boreholes/${boreholeId}/tests`, test.testId);
       const testData = this.cleanForFirestore({
         ...test,
-        startTime: test.startTime ? Timestamp.fromDate(test.startTime) : null,
-        endTime: test.endTime ? Timestamp.fromDate(test.endTime) : null,
+        startTime: this.safeTimestampFromDate(test.startTime),
+        endTime: this.safeTimestampFromDate(test.endTime),
         createdAt: test.createdAt,
         updatedAt: test.updatedAt
       });
