@@ -938,7 +938,7 @@ export class UploadComponent implements OnDestroy {
 
   // Check for achievements
   private checkAchievements(uploadCount: number): void {
-    const achievements = [];
+    const achievements: Array<{ id: string; title: string; description: string }> = [];
     
     if (uploadCount === 1 && !this.state.gamification.achievements.includes('first_upload')) {
       achievements.push({ id: 'first_upload', title: '🎯 First Upload', description: 'Uploaded your first file!' });
