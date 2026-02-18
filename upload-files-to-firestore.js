@@ -6,7 +6,9 @@
  * This script traverses the 'drive' folder, parses Excel files,
  * and uploads them to Firestore with error logging.
  * 
- * Usage: node upload-files-to-firestore.js
+ * Usage: 
+ *   node upload-files-to-firestore.js              # Normal mode (requires Firebase credentials)
+ *   node upload-files-to-firestore.js --dry-run    # Dry run mode (no Firebase required)
  */
 
 const fs = require('fs');
@@ -14,34 +16,44 @@ const path = require('path');
 const XLSX = require('xlsx');
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin
-// Note: You need to set GOOGLE_APPLICATION_CREDENTIALS environment variable
-// or provide serviceAccountKey.json file
-try {
-  // Try to initialize with environment variable or default credentials
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId: 'epikemplatinum'
-    });
-  } else if (fs.existsSync('./serviceAccountKey.json')) {
-    const serviceAccount = require('./serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: 'epikemplatinum'
-    });
-  } else {
-    console.log('⚠️  Warning: No Firebase credentials found. Using default credentials...');
-    admin.initializeApp({
-      projectId: 'epikemplatinum'
-    });
+// Check for dry-run mode
+const DRY_RUN = process.argv.includes('--dry-run');
+
+// Initialize Firebase Admin (skip in dry-run mode)
+if (!DRY_RUN) {
+  try {
+    // Try to initialize with environment variable or default credentials
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: 'epikemplatinum'
+      });
+    } else if (fs.existsSync('./serviceAccountKey.json')) {
+      const serviceAccount = require('./serviceAccountKey.json');
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: 'epikemplatinum'
+      });
+    } else {
+      console.log('⚠️  Warning: No Firebase credentials found. Running in dry-run mode...');
+      console.log('    Use --dry-run flag to suppress this warning\n');
+      process.argv.push('--dry-run');
+      // Re-check DRY_RUN flag
+      if (!DRY_RUN) {
+        // Force dry run mode
+        throw new Error('No credentials - switching to dry-run mode');
+      }
+    }
+  } catch (error) {
+    if (!DRY_RUN) {
+      console.error('Failed to initialize Firebase:', error.message);
+      console.log('Continuing in dry-run mode...\n');
+      process.argv.push('--dry-run');
+    }
   }
-} catch (error) {
-  console.error('Failed to initialize Firebase:', error.message);
-  process.exit(1);
 }
 
-const db = admin.firestore();
+const db = DRY_RUN ? null : admin.firestore();
 
 // Constants
 const DRIVE_FOLDER = path.join(__dirname, 'drive');
@@ -94,25 +106,48 @@ function getCellValue(sheet, cellRef) {
 }
 
 /**
- * Detect file type based on content
+ * Detect file type based on content and filename
  */
-function detectFileType(workbook) {
+function detectFileType(workbook, filename) {
   const sheetNames = workbook.SheetNames;
   const firstSheet = workbook.Sheets[sheetNames[0]];
   
-  // Check for keywords in the sheet
-  const cellA1 = getCellValue(firstSheet, 'A1') || '';
-  const cellB3 = getCellValue(firstSheet, 'B3') || '';
-  const cellC3 = getCellValue(firstSheet, 'C3') || '';
+  // First check the filename for obvious patterns
+  const lowerFilename = filename.toLowerCase();
   
-  // Check for discharge test patterns
-  if (cellA1.toString().toLowerCase().includes('step') || 
-      cellA1.toString().toLowerCase().includes('stepped')) {
+  if (lowerFilename.includes('step') && 
+      (lowerFilename.includes('discharge') || lowerFilename.includes('test'))) {
     return 'stepped_discharge';
   }
   
-  if (cellA1.toString().toLowerCase().includes('constant') || 
-      cellB3.toString().toLowerCase().includes('borehole')) {
+  if (lowerFilename.includes('constant') && 
+      (lowerFilename.includes('discharge') || lowerFilename.includes('test'))) {
+    return 'constant_discharge';
+  }
+  
+  // Check sheet content
+  const cellA1 = getCellValue(firstSheet, 'A1') || '';
+  const cellB3 = getCellValue(firstSheet, 'B3') || '';
+  const cellC3 = getCellValue(firstSheet, 'C3') || '';
+  const cellA3 = getCellValue(firstSheet, 'A3') || '';
+  
+  // Convert to strings and check
+  const a1Str = cellA1.toString().toLowerCase();
+  const b3Str = cellB3.toString().toLowerCase();
+  const c3Str = cellC3.toString().toLowerCase();
+  const a3Str = cellA3.toString().toLowerCase();
+  
+  // Check for discharge test patterns
+  if (a1Str.includes('step') || a1Str.includes('stepped')) {
+    return 'stepped_discharge';
+  }
+  
+  if (a1Str.includes('constant')) {
+    return 'constant_discharge';
+  }
+  
+  if (b3Str.includes('borehole') || c3Str.includes('borehole') || a3Str.includes('borehole')) {
+    // Likely a constant discharge test
     return 'constant_discharge';
   }
   
@@ -247,6 +282,12 @@ async function uploadToFirestore(data) {
   // Create a document ID based on the file name and upload time
   const docId = `${data.metadata?.boreholeNo || 'unknown'}_${Date.now()}`;
   
+  // In dry-run mode, just log what would be uploaded
+  if (DRY_RUN) {
+    console.log(`  [DRY-RUN] Would upload to ${collection}/${docId}`);
+    return { collection, docId };
+  }
+  
   await db.collection(collection).doc(docId).set(data);
   
   return { collection, docId };
@@ -263,7 +304,7 @@ async function processFile(filePath) {
     const workbook = XLSX.readFile(filePath);
     
     // Detect file type
-    const fileType = detectFileType(workbook);
+    const fileType = detectFileType(workbook, filePath);
     
     if (fileType === 'unknown') {
       stats.skippedFiles++;
@@ -324,7 +365,10 @@ async function traverseDirectory(dirPath) {
  * Main execution
  */
 async function main() {
-  console.log('🚀 Starting file upload process...\n');
+  console.log('🚀 Starting file upload process...');
+  if (DRY_RUN) {
+    console.log('📋 Running in DRY-RUN mode (no data will be uploaded to Firestore)');
+  }
   console.log(`📁 Scanning directory: ${DRIVE_FOLDER}\n`);
   
   // Clear previous log files
