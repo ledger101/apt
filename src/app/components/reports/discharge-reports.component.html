@@ -92,6 +92,16 @@
         >
           Readings Data
         </button>
+        <button
+          (click)="activeTab = 'charts'"
+          [class.border-blue-500]="activeTab === 'charts'"
+          [class.text-blue-600]="activeTab === 'charts'"
+          [class.border-transparent]="activeTab !== 'charts'"
+          [class.text-gray-500]="activeTab !== 'charts'"
+          class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm hover:text-gray-700 hover:border-gray-300 transition-colors"
+        >
+          Charts
+        </button>
       </nav>
     </div>
 
@@ -174,6 +184,33 @@
                     </table>
                 </div>
             </div>
+        </div>
+      </div>
+
+      <!-- Charts Tab -->
+      <div *ngIf="activeTab === 'charts'" class="p-6">
+        <div *ngIf="loadingSeries" class="flex justify-center py-8">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span class="ml-2">Loading chart data...</span>
+        </div>
+
+        <div *ngIf="!loadingSeries && chartConfigs.length === 0" class="text-center py-8 text-gray-500">
+          No chart data available for this test.
+        </div>
+
+        <div *ngIf="!loadingSeries && chartConfigs.length > 0" class="space-y-8">
+          <div *ngFor="let chartItem of chartConfigs" class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+              {{ chartItem.title }}
+            </h4>
+            <div class="relative h-80">
+              <canvas baseChart
+                [type]="chartItem.config.type"
+                [data]="chartItem.config.data"
+                [options]="chartItem.config.options">
+              </canvas>
+            </div>
+          </div>
         </div>
       </div>
 
