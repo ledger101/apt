@@ -101,11 +101,14 @@ export class LevParsingService {
       // Create discharge test data structure
       const dischargeTest: DischargeTest = {
         testId: `test-${Date.now()}`,
-        siteRef: `sites/${site.siteId}`,
+        testType: 'constant_discharge',
         boreholeRef: `sites/${site.siteId}/boreholes/${borehole.boreholeNo}`,
-        testType: 'Constant',
-        testDate: metadata.startTime ? new Date(metadata.startTime) : new Date(),
+        startTime: metadata.startTime ? new Date(metadata.startTime) : new Date(),
+        endTime: metadata.stopTime ? new Date(metadata.stopTime) : undefined,
+        summary: {},
         sourceFilePath: file.name,
+        status: 'parsed',
+        createdBy: 'user-id', // TODO: Get from Auth
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       };
